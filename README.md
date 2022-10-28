@@ -10,6 +10,7 @@ timeflux, py-newronika interface, and py-TMSi interface.
   `conda create --name aDBS python=3.9 jupyter pandas scipy numpy matplotlib h5py pytables bottleneck`
 - Packages to install:
   - `pip install timeflux`
+  - `pip install serial`
   
 - Download or clone <a href="https://gitlab.com/tmsi/tmsi-python-interface">TMSi Python Interface from GitLab</a>.   
 
