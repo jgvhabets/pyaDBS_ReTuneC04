@@ -25,7 +25,7 @@ class interface:
         self.Order = []
 
         # set portname
-        self.portname = 'COM3'
+        self.portname = 'COM5'
 
         # init serial object
         self.NWK_SerialCon = serial.Serial(self.portname, 38400, bytesize = 8,parity = serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE,timeout = 1)    
@@ -101,13 +101,17 @@ class interface:
         self.NWK_SerialCon.flushInput()
         self.NWK_SerialCon.close()
 
-#if __name__ == '__main__':
-#
-#    nwkinterface = interface()
-#    while True:
-#        testsample = nwkinterface.sampleFromDevice()
-#        if testsample is not None:
-#            print(testsample)
-#        else:
-#            print('none')
-#    nwkinterface.closeConnectionToDevice()
+if __name__ == '__main__':
+
+   nwkinterface = interface()
+   
+   while True:
+       testsample = nwkinterface.sampleFromDevice()
+       if testsample is not None:
+           print(testsample)
+       else:
+           print('none')
+   
+   nwkinterface.closeConnectionToDevice()
+
+
