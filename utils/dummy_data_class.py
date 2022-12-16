@@ -9,13 +9,13 @@ from numpy import ndarray
 
 
 @dataclass(repr=True, init=True,)
-class dummy_data:
+class DummyData_Base:
+    """
+    Create Dummy Data
+    e.g. for timeflux testing
+    """
     stn: ndarray
     stn_name: str
     ecog: ndarray
     ecog_name: str
-    # fs: int  # TO ADD
-
-    def __post_init__(self,):
-
-        print('include Fs later in dummy_dataa')
+    fs: int

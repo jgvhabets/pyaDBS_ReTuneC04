@@ -14,7 +14,7 @@ from os import getcwd, chdir
 print(getcwd())
 # define class which is imported as pickle
 from utils.data_handle_helpers import get_project_path, load_pickled_class
-from dummy.dummy_data_class import dummy_data
+from utils.dummy_data_class import DummyData_Base
 
 
 @dataclass(init=True, repr=True,)
@@ -29,7 +29,7 @@ class DummyData(Node):
 
         dummy_path = join(get_project_path('data'), 'dummy')
 
-        from dummy.dummy_data_class import dummy_data
+        from utils.dummy_data_class import DummyData_Base
 
         self._pickled_dummy = load_pickled_class(
             join(dummy_path, self.dummy_fname)
@@ -56,4 +56,4 @@ if __name__ == '__main__':
 
     dummy = DummyData()
 
-    print(dummy._dummy_data_arr.shape)
+    print(dummy._dummy_data.shape)

@@ -66,7 +66,7 @@ def get_repo_path(
         path = dirname(path)
     
 
-from dummy.dummy_data_class import dummy_data
+from utils.dummy_data_class import DummyData_Base
 
 def load_pickled_class(path):
 
