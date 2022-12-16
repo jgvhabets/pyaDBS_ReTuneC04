@@ -24,10 +24,14 @@ def get_project_path(
     
     path = getcwd()
 
-    repo_name = 'pyaDBS_ReTuneC04'
+    repo_name = 'aDBS_C04'
+
+    while_count = 0
     while path[-len(repo_name):] != repo_name:
 
         path = dirname(path)
+        while_count += 1
+        assert while_count < 10, 'Folder not found'
     
     if subfolder in ['data', 'code', 'figures', 'results']:
 
@@ -41,13 +45,28 @@ def get_project_path(
         return path
 
 
-@dataclass(repr=True, init=True,)
-class dummy_data:
-    stn: np.ndarray
-    stn_name: str
-    ecog: np.ndarray
-    ecog_name: str
+def get_repo_path(
+    subfolder: str = '',
+):
+    """
+    Finds path of projectfolder, and
+    subfolder if defined, on current machine
+    For projectfolder path, no input is required.
 
+    Input:
+        - subfolder: data/code/figure to retrieve
+            subfolder path
+    """
+    
+    path = getcwd()
+
+    repo_name = 'pyaDBS_ReTuneC04'
+    while path[-len(repo_name):] != repo_name:
+
+        path = dirname(path)
+    
+
+from dummy.dummy_data_class import dummy_data
 
 def load_pickled_class(path):
 
@@ -57,3 +76,5 @@ def load_pickled_class(path):
         f.close()
     
     return output
+
+
