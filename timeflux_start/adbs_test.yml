@@ -1,0 +1,152 @@
+# timeflux example BCI
+
+# using LSL for intergraph communication and to sample Newronika/ TMSi
+# doc: https://doc.timeflux.io/en/stable/api/timeflux/nodes/lsl/index.html
+
+graphs:
+
+  # The publish/subscribe broker graph
+  - id: PubSubBroker
+    nodes:
+    # Allow communication between graphs
+    - id: Broker
+      module: timeflux.nodes.zmq
+      class: Broker
+  
+  # Data sampler
+  # generate raw data block with TMSi or Newronika, and send via LSL to Processing
+  - id: DataSampler
+    nodes:
+
+    # # Extract ephys-signal from Newronika sampler
+    # - id: sampler
+    #   module: utils_newronika.nwkstation
+    #   class: interface
+    #   # params:
+    #   #   name: signal
+    # Extract ephys-signal from dummy data generator
+    - id: sampler
+      module: dummy.dummy_ephys
+      class: DummyData
+      # params:
+      #   name: signal
+    # collect data with LSL-sender (inter-graph communication)
+    - id: outlet
+      module: timeflux.nodes.lsl
+      class: Send
+      params:
+        name: raw_signal
+    edges:
+      - source: sampler
+        target: outlet
+    rate: 25
+
+  # The main processing graph
+  - id: Processing
+    nodes:
+    # Receive ephys-raw-signal from LSL-Sender (inter-graph from in DataSampler)
+    - id: LSL_inlet
+      module: timeflux.nodes.lsl
+      class: Receive
+      params:
+        prop: name
+        value: raw_signal
+        unit: s
+        sync: None
+    # Continuously buffer the signal (use TimeWindow or SampleWindow instead of Window (=will be deprecated))
+    - id: Window
+      module: timeflux.nodes.window
+      class: TimeWindow
+      params:
+        length: 0.5
+        # step: 0.5
+    # Compute the power spectral density
+    - id: Welch
+      module: timeflux_dsp.nodes.spectral
+      class: Welch
+      params:
+        rate: 250
+        nperseg: 128
+        noverlap: 64
+    # Average the power over band frequencies
+    - id: Bands
+      module: timeflux_dsp.nodes.spectral
+      class: Bands
+    # Publish (send) processed signal (biomarker) to Output graph via Broker
+    - id: PublisherSignal
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: band_signal
+    # Publish the raw ephys signal
+    - id: PublisherRaw
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: raw
+    # Publish the frequency bands
+    - id: PublisherAllBands
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: bands_all
+    # Connect nodes
+    edges:
+      - source: LSL_inlet
+        target: Window
+      - source: Window
+        target: Welch
+      - source: Welch
+        target: Bands
+      - source: Bands:beta
+        target: PublisherSignal
+      - source: LSL_inlet
+        target: PublisherRaw
+      - source: Bands
+        target: PublisherAllBands
+    # Run this graph 25 times per second
+    rate: 25
+
+  # The output processing graph
+  - id: Output
+    nodes:
+    # Receive processed signal from the broker
+    - id: Subscriber
+      module: timeflux.nodes.zmq
+      class: Sub
+      params:
+        topics: band_signal
+    - id: StimOutput
+      module: utils.stimulator_output_C
+      class: StimOutput
+    edges:
+      - source: Subscriber
+        target: StimOutput
+    rate: 4
+
+  # The recorder graph
+  - id: SaveToFile
+    nodes:
+    # Receive data streams from the broker
+    - id: Subscriber
+      module: timeflux.nodes.zmq
+      class: Sub
+      params:
+        topics:
+        - raw
+        - bands_all
+        - band_signal
+    # Record to file
+    - id: Recorder
+      module: timeflux.nodes.hdf5
+      class: Save
+    # Connect nodes
+    edges:
+      - source: Subscriber:raw
+        target: Recorder:ephys_raw
+      - source: Subscriber:bands_all
+        target: Recorder:ephys_bands
+      - source: Subscriber:band_signal
+        target: Recorder:ephys_signal
+    # Update file every second
+    rate: 1
