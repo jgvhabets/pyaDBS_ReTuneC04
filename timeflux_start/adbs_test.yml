@@ -1,4 +1,4 @@
-# timeflux example BCI
+# timeflux aDBS draft
 
 # using LSL for intergraph communication and to sample Newronika/ TMSi
 # doc: https://doc.timeflux.io/en/stable/api/timeflux/nodes/lsl/index.html
@@ -17,29 +17,39 @@ graphs:
   # generate raw data block with TMSi or Newronika, and send via LSL to Processing
   - id: DataSampler
     nodes:
-
     # # Extract ephys-signal from Newronika sampler
-    # - id: sampler
-    #   module: utils_newronika.nwkstation
+    # - id: Sampler
+    #   module: utils_newronika.nwkstation_tf
     #   class: interface
-    #   # params:
-    #   #   name: signal
-    # Extract ephys-signal from dummy data generator
-    - id: sampler
-      module: dummy.dummy_ephys
+    # # Extract ephys-signal from dummy data generator
+    # - id: Sampler
+    #   module: dummy.dummy_ephys
+    #   class: DummyData
+    #   params:
+    #     datasource: stn
+    - id: Sampler
+      module: timeflux.helpers.testing
       class: DummyData
-      # params:
-      #   name: signal
+      params:
+        num_rows: 1
+        num_cols: 10
     # collect data with LSL-sender (inter-graph communication)
-    - id: outlet
+    - id: LSL_out
       module: timeflux.nodes.lsl
       class: Send
       params:
-        name: raw_signal
+        name: raw_nwk
+    - id: PublisherRaw
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: raw_nwk
     edges:
-      - source: sampler
-        target: outlet
-    rate: 25
+      - source: Sampler
+        target: LSL_out
+      - source: Sampler
+        target: PublisherRaw
+    rate: 250
 
   # The main processing graph
   - id: Processing
@@ -50,7 +60,7 @@ graphs:
       class: Receive
       params:
         prop: name
-        value: raw_signal
+        value: raw_nwk
         unit: s
         sync: None
     # Continuously buffer the signal (use TimeWindow or SampleWindow instead of Window (=will be deprecated))
@@ -83,7 +93,7 @@ graphs:
       module: timeflux.nodes.zmq
       class: Pub
       params:
-        topic: raw
+        topic: raw_nwk
     # Publish the frequency bands
     - id: PublisherAllBands
       module: timeflux.nodes.zmq
@@ -133,7 +143,7 @@ graphs:
       class: Sub
       params:
         topics:
-        - raw
+        - raw_nwk
         - bands_all
         - band_signal
     # Record to file
@@ -142,7 +152,7 @@ graphs:
       class: Save
     # Connect nodes
     edges:
-      - source: Subscriber:raw
+      - source: Subscriber:raw_nwk
         target: Recorder:ephys_raw
       - source: Subscriber:bands_all
         target: Recorder:ephys_bands

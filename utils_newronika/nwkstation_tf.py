@@ -27,7 +27,14 @@ class interface(Node):
         self.portname = 'COM5'
 
         # init serial object
-        self.NWK_SerialCon = serial.Serial(self.portname, 38400, bytesize = 8,parity = serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE,timeout = 1)    
+        self.NWK_SerialCon = serial.Serial(
+            self.portname,
+            baudrate=38400,
+            bytesize = 8,
+            parity = serial.PARITY_NONE,
+            stopbits=serial.STOPBITS_ONE,
+            timeout = 1
+        )    
 
     def sampleFromDevice(self):   
 
@@ -39,11 +46,11 @@ class interface(Node):
         while not self.sample_ch1:
 
             # loop until values appear on serial port
-            while(self.NWK_SerialCon.inWaiting() == 0): 
+            while self.NWK_SerialCon.inWaiting() == 0: 
                     pass
                 
             # read serial port   
-            self.NWKString = self.NWK_SerialCon.read(size = 1)  
+            self.NWKString = self.NWK_SerialCon.read(size=1)  
             self.Int2Store = ord(self.NWKString)
                     
             if self.FillBuffer == 1:
@@ -100,6 +107,7 @@ class interface(Node):
         self.NWK_SerialCon.flushInput()
         self.NWK_SerialCon.close()
 
+    # timeflux output function
     def update(self):
         # update output port
         self.o.set(self.output_samples)
