@@ -20,6 +20,10 @@ timeflux, py-newronika interface, and py-TMSi interface.
   
 - Download or clone <a href="https://gitlab.com/tmsi/tmsi-python-interface">TMSi Python Interface from GitLab</a>.   
 
+
+### Important Notes
+
+- don't use camelBack typing for Classnames, rather capitals at first letter
  
 ### Contributors:
 - <a href="https://github.com/jgvhabets">Jeroen Habets</a> 

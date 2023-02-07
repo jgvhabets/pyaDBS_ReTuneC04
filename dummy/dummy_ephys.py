@@ -18,9 +18,39 @@ from os import getcwd, chdir
 from utils import data_handle_helpers as dataHelpers
 from utils.dummy_data_class import DummyData_Base
 
+import random
+
+class Testrandom(Node):
+    def __init__(
+        self,
+        columns=5,
+        rows_min=2,
+        rows_max=10,
+        value_min=0,
+        value_max=9,
+        names=None,
+        seed=None,
+    ):
+        """Return random integers between value_min and value_max (inclusive)"""
+        self._rows_min = rows_min
+        self._rows_max = rows_max
+        self._value_min = value_min
+        self._value_max = value_max
+        self._names = names
+        self._columns = len(names) if names else columns
+        random.seed(seed)
+        np.random.seed(seed)
+
+    def update(self):
+        rows = random.randint(self._rows_min, self._rows_max)
+        shape = (rows, self._columns)
+        self.o.set(
+            np.random.randint(self._value_min, self._value_max + 1, size=shape),
+            names=self._names,
+        )
 
 @dataclass(init=True, repr=True,)
-class DummyData(Node):
+class Dummydata(Node):
     winlen: int=250
     datasource: str='stn'
     dummy_fname: str='dummy_data_class.P'
@@ -46,11 +76,10 @@ class DummyData(Node):
 
     
     def update(self):
-        
         data_window = self._dummy_data[10, :8]
         chname = self._dummy_name
         timestamps = [n * (1 / self._pickled_dummy.fs) for n in range(len(data_window))]
-        print(data_window)
+        # print(data_window)
         self.o.set(
             rows=data_window,
             timestamps=timestamps,
@@ -60,7 +89,7 @@ class DummyData(Node):
 if __name__ == '__main__':
 
 
-    dummy = DummyData()
+    dummy = Dummydata()
 
     # print(dummy._dummy_data.shape)
     # print(dummy._dummy_data[10, :8])
