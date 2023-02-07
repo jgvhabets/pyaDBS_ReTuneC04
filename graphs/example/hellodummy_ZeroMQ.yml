@@ -1,5 +1,10 @@
 # timeflux example dual-input with ZeroMQ (Publishing and Subscribing)
+# PM running instructions: 
+#   run from: cd C:\Users\habetsj\Research\projects\aDBS_C04\code\pyaDBS_ReTuneC04
+#   cmd: timeflux -d graphs/example/hellodummy_ZeroMQ.yml
 # view at: http://localhost:8000/monitor/
+# TODO: solve FFT problem with x.real() with imported value in wrong float type
+# TODO: apply LSL in dummy workflow
 
 graphs:
 
@@ -25,69 +30,107 @@ graphs:
       module: dummy.dummy_ephys
       class: Dummydata
       params:
-        winlen: 250
+        winlen: 256
         datasource: stn
     - id: ecog_import  # Import dummy ephys signal
       module: dummy.dummy_ephys
       class: Dummydata
       params:
-        winlen: 250
+        winlen: 256
         datasource: ecog
-    # - id: Welch  # Compute the power spectral density
-    #   module: timeflux_dsp.nodes.spectral
-    #   class: Welch
-    # - id: Bands  # Average the power over band frequencies
-    #   module: timeflux_dsp.nodes.spectral
-    #   class: Bands
+    - id: Welch_stn  # Compute the power spectral density
+      module: timeflux_dsp.nodes.spectral
+      class: Welch
+      params:
+        rate: 2048
+        nperseg: 128
+    - id: Welch_ecog  # Compute the power spectral density
+      module: timeflux_dsp.nodes.spectral
+      class: Welch
+      params:
+        rate: 2048
+        nperseg: 128
+    - id: Bands_stn  # Average the power over band frequencies
+      module: timeflux_dsp.nodes.spectral
+      class: Bands
+      params:
+        relative: False  # set to True for relative powers
+    - id: Bands_ecog  # Average the power over band frequencies
+      module: timeflux_dsp.nodes.spectral
+      class: Bands
+      params:
+        relative: False  # set to True for relative powers
     # # Send to an external application
     # - id: OSC
     #   module: timeflux.nodes.osc
     #   class: Client
     #   params:
     #     address: /alpha
-    - id: pub_raw_stn  # Publish the raw Dummy ephys signal
+    - id: Pub_raw_stn  # Publish the raw Dummy ephys signal
       module: timeflux.nodes.zmq
       class: Pub
       params:
         topic: raw_stn
-    - id: pub_raw_ecog  # Publish the raw Dummy ephys signal
+    - id: Pub_raw_ecog  # Publish the raw Dummy ephys signal
       module: timeflux.nodes.zmq
       class: Pub
       params:
         topic: raw_ecog
-    # - id: PublisherBands  # Publish the frequency bands
-    #   module: timeflux.nodes.zmq
-    #   class: Pub
-    #   params:
-    #     topic: bands
+    - id: Pub_stn_bands  # Publish the frequency bands
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: bands_stn
+    - id: Pub_ecog_bands  # Publish the frequency bands
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: bands_ecog
     edges:  # Connect nodes WITHIN graph
       - source: stn_import
-        target: pub_raw_stn
+        target: Pub_raw_stn
       - source: ecog_import
-        target: pub_raw_ecog
-      # - source: Welch
-      #   target: Bands
+        target: Pub_raw_ecog
+      - source: stn_import
+        target: Welch_stn
+      - source: Welch_stn
+        target: Bands_stn
+      - source: ecog_import
+        target: Welch_ecog
+      - source: Welch_ecog
+        target: Bands_ecog
       # - source: Bands:alpha
       #   target: OSC
       # - source: LSL
       #   target: PublisherRaw
-      # - source: Bands
-      #   target: PublisherBands
-    # Run this graph 25 times per second
+      - source: Bands_stn:beta  # TODO: CHECK Bands class for band selection func
+        target: Pub_stn_bands
+      - source: Bands_ecog:beta
+        target: Pub_ecog_bands
+    # Run this graph 4 times per second
     rate: 4
 
   - id: Subscriber
     nodes:
-    - id: sub
+    - id: sub_raw
       module: timeflux.nodes.zmq
       class: Sub
       params:
         topics: [raw_stn, raw_ecog]
+    - id: sub_bands
+      module: timeflux.nodes.zmq
+      class: Sub
+      params:
+        topics: [bands_stn, bands_ecog]
     - id: monitor
       module: timeflux_ui.nodes.ui
       class: UI
     edges:
-      - source: sub:raw_stn
+      - source: sub_raw:raw_stn
         target: monitor:raw_stn
-      - source: sub:raw_ecog
+      - source: sub_raw:raw_ecog
         target: monitor:raw_ecog
+      - source: sub_bands:bands_stn
+        target: monitor:bands_stn
+      - source: sub_bands:bands_ecog
+        target: monitor:bands_ecog

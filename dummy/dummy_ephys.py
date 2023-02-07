@@ -82,6 +82,8 @@ class Dummydata(Node):
         self._dummy_name = getattr(
             self._pickled_dummy, f'{self._datasource}_name'
         )
+        fs = self._pickled_dummy.fs
+        print(f'Imported Dummy-Data ({datasource}) has fs: {fs} Hz')
         # # use either random selection
         # np.random.seed(seed)
         # or use increasing indices
