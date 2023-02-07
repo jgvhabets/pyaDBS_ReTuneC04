@@ -5,14 +5,14 @@ to test run alone (WIN): python -m dummy.dummy_ephys
 """
 
 # import public packages
-from os.path import join, exists
+from os.path import join
 import pickle
 import numpy as np
-from dataclasses import dataclass
+# from dataclasses import dataclass
 from timeflux.core.node import Node
-from timeflux.helpers.testing import ReadData
+# from timeflux.helpers.testing import ReadData
 
-from os import getcwd, chdir
+# from os import getcwd, chdir
 
 # define class which is imported as pickle
 from utils import data_handle_helpers as dataHelpers
@@ -49,51 +49,81 @@ class Testrandom(Node):
             names=self._names,
         )
 
-@dataclass(init=True, repr=True,)
+"""
+__init__ is performed only once at the start of the timeflux run,
+update() is repeated at every repetition of the graph (frequency
+indicated by the rate) 
+"""
 class Dummydata(Node):
-    winlen: int=250
-    datasource: str='stn'
-    dummy_fname: str='dummy_data_class.P'
-    
-    def __post_init__(self,):
-
-        dummy_path = join(dataHelpers.get_project_path('data'), 'dummy')
+    def __init__(
+        self,
+        winlen=250,
+        datasource='stn',
+        dummy_fname='dummy_data_class.P',
+        seed=27,
+    ):
+        self._winlen = winlen
+        self._datasource = datasource
+        self._dummy_fname = dummy_fname
+        self._dummy_path = join(
+            dataHelpers.get_project_path('data'), 'dummy'
+        )
+        self._seed = seed
 
         from utils.dummy_data_class import DummyData_Base
 
         self._pickled_dummy = dataHelpers.load_pickled_class(
-            join(dummy_path, self.dummy_fname)
+            join(self._dummy_path, self._dummy_fname)
         )
         self._dummy_data = np.array(getattr(
-            self._pickled_dummy, self.datasource
+            self._pickled_dummy, self._datasource
         ))
-
         # print(vars(self._pickled_dummy).keys())
-        
         self._dummy_name = getattr(
-            self._pickled_dummy, f'{self.datasource}_name'
+            self._pickled_dummy, f'{self._datasource}_name'
         )
-
+        # # use either random selection
+        # np.random.seed(seed)
+        # or use increasing indices
+        self._win_i = 0
+        
     
     def update(self):
-        data_window = self._dummy_data[10, :8]
+        # # use random index to chose window of dummy data
+        # win_i = np.random.randint(
+        #     0, self._dummy_data.shape[0] + 1, size=1
+        # )[0]
+        # use chronological windows of dummy data
+        self._win_i += 1
+        if self._win_i == self._dummy_data.shape[0]:
+            self._win_i = 0
+        win_i = self._win_i
+
+        print(f'use window {win_i}')
+        data_window = self._dummy_data[win_i, :self._winlen]
         chname = self._dummy_name
-        timestamps = [n * (1 / self._pickled_dummy.fs) for n in range(len(data_window))]
-        # print(data_window)
+
+        # # original timestamps are not in dummy data
+        # timestamps = [n * (1 / self._pickled_dummy.fs) for n in range(len(data_window))]
+        
+        # sets as pandas DataFrame
         self.o.set(
-            rows=data_window,
-            timestamps=timestamps,
-            # names=chname,
+            data_window,
+            # timestamps=timestamps,
+            names=[chname],
         )
 
-if __name__ == '__main__':
 
 
-    dummy = Dummydata()
 
-    # print(dummy._dummy_data.shape)
-    # print(dummy._dummy_data[10, :8])
+# if __name__ == '__main__':
 
-    print(dummy.update())
+
+#     dummy = Dummydata()
+
+#     # print(dummy._dummy_data.shape)
+#     # print(dummy._dummy_data[10, :8])
+
+#     print(dummy.update())
 
 

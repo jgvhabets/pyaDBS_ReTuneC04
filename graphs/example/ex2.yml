@@ -18,7 +18,7 @@ graphs:
       module: timeflux_example.nodes.arithmetic
       class: Add
       params:
-        value: 1
+        value: 100
     - id: pub_before
       module: timeflux.nodes.zmq
       class: Pub

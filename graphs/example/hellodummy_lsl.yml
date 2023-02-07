@@ -3,16 +3,16 @@
 graphs:
 
   # The publish/subscribe broker graph
-  - id: PubSubBroker
+  - id: Broker
     nodes:
     # Allow communication between graphs
-    - id: Broker
+    - id: broker
       module: timeflux.nodes.zmq
       class: Broker
   
 
   # The main processing graph
-  - id: Processing
+  - id: DummyPublisher
     nodes:
 
     # # Receive ephys signal from Newronika sampler
@@ -22,12 +22,13 @@ graphs:
     #   params:
     #     name: signal
 
-    # Receive EEG signal from the network
-    - id: Dummy
+    # Import dummy ephys signal
+    - id: dummy_import
       module: dummy.dummy_ephys
-      class: DummyData
+      class: Dummydata
       params:
-        name: signal
+        winlen: 250
+        datasource: stn
 
     # Receive EEG signal from the network
     - id: LSL

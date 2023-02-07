@@ -1,0 +1,93 @@
+# timeflux example dual-input with ZeroMQ (Publishing and Subscribing)
+# view at: http://localhost:8000/monitor/
+
+graphs:
+
+  # The publish/subscribe broker graph
+  - id: Broker
+    nodes:
+    # Allow communication between graphs
+    - id: broker
+      module: timeflux.nodes.zmq
+      class: Broker
+  
+
+  # The main processing graph
+  - id: DummyPublisher
+    nodes:
+    # # Receive ephys signal from Newronika sampler
+    # - id: Newronika
+    #   module: utils_newronika.nwkstation
+    #   class: interface
+    #   params:
+    #     name: signal
+    - id: stn_import  # Import dummy ephys signal
+      module: dummy.dummy_ephys
+      class: Dummydata
+      params:
+        winlen: 250
+        datasource: stn
+    - id: ecog_import  # Import dummy ephys signal
+      module: dummy.dummy_ephys
+      class: Dummydata
+      params:
+        winlen: 250
+        datasource: ecog
+    # - id: Welch  # Compute the power spectral density
+    #   module: timeflux_dsp.nodes.spectral
+    #   class: Welch
+    # - id: Bands  # Average the power over band frequencies
+    #   module: timeflux_dsp.nodes.spectral
+    #   class: Bands
+    # # Send to an external application
+    # - id: OSC
+    #   module: timeflux.nodes.osc
+    #   class: Client
+    #   params:
+    #     address: /alpha
+    - id: pub_raw_stn  # Publish the raw Dummy ephys signal
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: raw_stn
+    - id: pub_raw_ecog  # Publish the raw Dummy ephys signal
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: raw_ecog
+    # - id: PublisherBands  # Publish the frequency bands
+    #   module: timeflux.nodes.zmq
+    #   class: Pub
+    #   params:
+    #     topic: bands
+    edges:  # Connect nodes WITHIN graph
+      - source: stn_import
+        target: pub_raw_stn
+      - source: ecog_import
+        target: pub_raw_ecog
+      # - source: Welch
+      #   target: Bands
+      # - source: Bands:alpha
+      #   target: OSC
+      # - source: LSL
+      #   target: PublisherRaw
+      # - source: Bands
+      #   target: PublisherBands
+    # Run this graph 25 times per second
+    rate: 4
+
+  - id: Subscriber
+    nodes:
+    - id: sub
+      module: timeflux.nodes.zmq
+      class: Sub
+      params:
+        topics: [raw_stn, raw_ecog]
+    - id: monitor
+      module: timeflux_ui.nodes.ui
+      class: UI
+    edges:
+      - source: sub:raw_stn
+        target: monitor:raw_stn
+      - source: sub:raw_ecog
+        target: monitor:raw_ecog

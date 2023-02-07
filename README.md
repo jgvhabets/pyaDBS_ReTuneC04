@@ -24,6 +24,7 @@ timeflux, py-newronika interface, and py-TMSi interface.
 ### Important Notes
 
 - don't use camelBack typing for Classnames, rather capitals at first letter
+- stick with normal python classes to avoid problematic inheritance from normal classes into dataclasses
  
 ### Contributors:
 - <a href="https://github.com/jgvhabets">Jeroen Habets</a> 
