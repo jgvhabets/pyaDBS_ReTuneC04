@@ -22,18 +22,18 @@ graphs:
     nodes:
     # # Receive ephys signal from Newronika sampler
     # - id: Newronika
-    #   module: utils_newronika.nwkstation
+    #   module: nodes.newronika.nwkstation
     #   class: interface
     #   params:
     #     name: signal
     - id: stn_import  # Import dummy ephys signal
-      module: dummy.dummy_ephys
+      module: nodes.dummy.dummy_ephys
       class: Dummydata
       params:
         winlen: 256
         datasource: stn
     - id: ecog_import  # Import dummy ephys signal
-      module: dummy.dummy_ephys
+      module: nodes.dummy.dummy_ephys
       class: Dummydata
       params:
         winlen: 256
@@ -54,18 +54,12 @@ graphs:
       module: timeflux_dsp.nodes.spectral
       class: Bands
       params:
-        relative: False  # set to True for relative powers
+        relative: True  # set to True for relative powers
     - id: Bands_ecog  # Average the power over band frequencies
       module: timeflux_dsp.nodes.spectral
       class: Bands
       params:
-        relative: False  # set to True for relative powers
-    # # Send to an external application
-    # - id: OSC
-    #   module: timeflux.nodes.osc
-    #   class: Client
-    #   params:
-    #     address: /alpha
+        relative: True  # set to True for relative powers
     - id: Pub_raw_stn  # Publish the raw Dummy ephys signal
       module: timeflux.nodes.zmq
       class: Pub
@@ -86,6 +80,16 @@ graphs:
       class: Pub
       params:
         topic: bands_ecog
+    - id: compare_stn  # Publish the frequency bands
+      module: nodes.compare_input
+      class: Compareinput
+      params:
+        rel_power: True
+    - id: Pub_stn_output  # Publish the frequency bands
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: stn_output
     edges:  # Connect nodes WITHIN graph
       - source: stn_import
         target: Pub_raw_stn
@@ -99,16 +103,16 @@ graphs:
         target: Welch_ecog
       - source: Welch_ecog
         target: Bands_ecog
-      # - source: Bands:alpha
-      #   target: OSC
-      # - source: LSL
-      #   target: PublisherRaw
+      
+      - source: Bands_stn:beta  # TODO: CHECK Bands class for band selection func
+        target: compare_stn
       - source: Bands_stn:beta  # TODO: CHECK Bands class for band selection func
         target: Pub_stn_bands
       - source: Bands_ecog:beta
         target: Pub_ecog_bands
-    # Run this graph 4 times per second
-    rate: 4
+      - source: compare_stn
+        target: Pub_stn_output
+    rate: 4  # Run this graph 4 times per second
 
   - id: Subscriber
     nodes:
@@ -122,6 +126,11 @@ graphs:
       class: Sub
       params:
         topics: [bands_stn, bands_ecog]
+    - id: sub_output
+      module: timeflux.nodes.zmq
+      class: Sub
+      params:
+        topics: stn_output
     - id: monitor
       module: timeflux_ui.nodes.ui
       class: UI
@@ -134,3 +143,6 @@ graphs:
         target: monitor:bands_stn
       - source: sub_bands:bands_ecog
         target: monitor:bands_ecog
+      - source: sub_output:stn_output
+        target: monitor:stn_output
+    rate: 1
