@@ -28,7 +28,7 @@ class Coherence(Node):
         allowed_metrics = [
             'coh', 'squared_coh', 'icoh', 'abs_icoh' 
         ]
-        assert metric.lower() in allowed_metrics, print(
+        assert metric.lower() in allowed_metrics, (
             f'incorrect coh_metric, should be in {allowed_metrics}')
         self._metric = metric.lower()
 
@@ -46,7 +46,7 @@ class Coherence(Node):
 
         if t1 != t2: print('Coherence timings are not identical')
         
-        assert type(sig1[0]) == np.float64, print(
+        assert type(sig1[0]) == np.float64, (
             "raw signals have to np.float64"
         )
 
