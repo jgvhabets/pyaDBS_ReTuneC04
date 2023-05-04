@@ -11,6 +11,7 @@ timeflux, py-newronika interface, and py-TMSi interface.
 - Packages to install:
   - `pip install timeflux`
   - `pip install serial`
+  - `pip install py-serial`
 
 - timeflux plugins installed
   - timeflux_example
