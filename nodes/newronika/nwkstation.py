@@ -28,7 +28,7 @@ class interface:
         self.portname = 'COM5'
 
         # init serial object
-        self.NWK_SerialCon = serial.Serial(self.portname, 38400, bytesize = 8,parity = serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE,timeout = 1)    
+        self.NWK_SerialCon = serial.Serial(self.portname, 38400, bytesize = 8, parity = serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout = 1)    
 
     def sampleFromDevice(self):   
 
@@ -94,7 +94,7 @@ class interface:
                     pass
                 self.cnt = 0
 
-        return self.sample_ch1, self.sample_ch2 
+        return self.sample_ch1, self.sample_ch2  # both channels are now 2 values
 
     def closeConnectionToDevice(self):
 

@@ -41,7 +41,7 @@ class interface(Node):
     # timeflux output function
     def update(self):
         # update output port
-        ch1, ch2 = sampleFromDevice(self)
+        ch1, ch2 = sampleFromDevice(self)  # gives 2 values per channel
 
         if type(ch1) != list and type(ch1) != np.array:
             ch1 = list(ch1)
