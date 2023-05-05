@@ -11,12 +11,16 @@ timeflux, py-newronika interface, and py-TMSi interface.
 - Packages to install:
   - `pip install timeflux`
   - `pip install serial`
-  - `pip install py-serial`
 
 - timeflux plugins installed
   - timeflux_example
   - timeflux_ui
   - timeflux_dsp
+
+- for TMSi functions:
+  - `pip install pyserial`
+  - `pip install PySide2`
+  - `pip install pyqtgraph`
 
   
 - Download or clone <a href="https://gitlab.com/tmsi/tmsi-python-interface">TMSi Python Interface from GitLab</a>.   
