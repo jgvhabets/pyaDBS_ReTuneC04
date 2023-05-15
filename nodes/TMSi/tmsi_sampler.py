@@ -15,7 +15,7 @@ import queue
 
 from timeflux.core.node import Node
 
-from add_tmsi_repo import add_tmsi_repo
+from nodes.TMSi.add_tmsi_repo import add_tmsi_repo
 add_tmsi_repo()
 
 from TMSiSDK import tmsi_device, get_config, sample_data_server
@@ -27,21 +27,20 @@ from TMSiSDK.error import TMSiError, TMSiErrorCode, DeviceErrorLookupTable
 from TMSiPlugins.external_devices.usb_ttl_device import USB_TTL_device, TTLError
 
 
-class tmsiSampler(Node):
+
+class Tmsisampler(Node):
     """
     Class to connect and sample TMSi SAGA
     stream.
+
+    Parameters (required)
+        TMSiDevice: USB TTL module is TMSi-device specific. Please enter the 
+                        desired device in the parameters ("SAGA" or "APEX")
+        COM_port: define the port on the computer where the TTL module was installed 
     """
     def __init__(
-        self, TMSiDevice, COM_port, _QUEUE_SIZE = 1000
+        self, _QUEUE_SIZE = 1000
     ):
-        """
-        Parameters (required)
-                TMSiDevice: USB TTL module is TMSi-device specific. Please enter the 
-                               desired device in the parameters ("SAGA" or "APEX")
-                COM_port: define the port on the computer where the TTL module was installed  
-
-        """
         try:
             # Initialise the TMSi-SDK first before starting using it
             tmsi_device.initialize()
@@ -52,7 +51,7 @@ class tmsiSampler(Node):
 
             # Get the handle to the first discovered device.
             if (len(discoveryList) > 0):
-                dev = discoveryList[0]
+                self.dev = discoveryList[0]
         except:
             raise ValueError('SAGA not detected in tmsiSampler()')      
         
@@ -61,12 +60,13 @@ class tmsiSampler(Node):
         # Open a connection to the SAGA-system
         self.dev.open()
 
+
         # sanity check
-        self.fs = dev.config.sample_rate
+        self.fs = self.dev.config.sample_rate
         print(f'detected sampling rate: {self.fs} Hz')
 
         # create queue and link it to SAGA device
-        self.q_sample_sets = queue.Queue(maxsize=self._QUEUE_SIZE)  # if maxsize=0, queue is indefinite
+        self.q_sample_sets = queue.Queue(maxsize=_QUEUE_SIZE)  # if maxsize=0, queue is indefinite
         sample_data_server.registerConsumer(self.dev.id, self.q_sample_sets)
         print(f'TMSiSDK sample_data_server set for device: {self.dev.id}')
 
@@ -80,15 +80,14 @@ class tmsiSampler(Node):
 
     def update(self):
 
-        print('update TMSI sampler')
         # get available samples from queue
         sampled = self.q_sample_sets.get()
-        samples = np.array(sampled.samples)
+        samples = DataFrame(data=np.array(sampled.samples),)
 
         self.o.set(
             samples,
-            name='tsmi_samples'
-        )
+            # names='tsmi_samples'
+        )  # has to be dataframe?
 
 
     def close(self):
@@ -99,7 +98,7 @@ class tmsiSampler(Node):
 
 if __name__ == '__main__':
     # execute
-    tmsiSampler(TMSiDevice='SAGA', COM_port=1)
+    Tmsisampler()
 
 
 # def ACC_BIP_EXAMPLE():
