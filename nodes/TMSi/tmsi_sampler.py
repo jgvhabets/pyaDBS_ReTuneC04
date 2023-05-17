@@ -63,7 +63,26 @@ class Tmsisampler(Node):
 
         # sanity check
         self.fs = self.dev.config.sample_rate
+        ch_list = self.dev.config.channels
         print(f'detected sampling rate: {self.fs} Hz')
+        print(f'n-channels detected: {len(ch_list)}')
+
+
+        for i_ch, ch in enumerate(ch_list):
+            if ch.enabled:
+                print(f'channel # {i_ch}: {ch.name} ENABLED (type {ch.type})')   # ch.unit_name
+            else:
+                print(f'channel {ch.name} NOT enabled')
+            
+            if 'BIP' in ch.name or 'AUX' in ch.name:
+                ch.enabled = True
+            else:
+                ch.enabled = False
+
+        self.dev.config.channels = ch_list
+        self.dev.update_sensors()
+
+        print(f'n-channels left: {len(self.dev.channels)}')
 
         # create queue and link it to SAGA device
         self.q_sample_sets = queue.Queue(maxsize=_QUEUE_SIZE)  # if maxsize=0, queue is indefinite
@@ -75,6 +94,7 @@ class Tmsisampler(Node):
 
         self.dev.start_measurement()
 
+        self.count = 0
         
 
 
@@ -84,11 +104,18 @@ class Tmsisampler(Node):
         sampled = self.q_sample_sets.get()
         samples = DataFrame(data=np.array(sampled.samples),)
 
+        print(samples.shape)
+
         self.o.set(
             samples,
             # names='tsmi_samples'
         )  # has to be dataframe?
 
+        self.count += 1
+
+        if self.count > 500:
+            print('count reached max')
+            self.close()
 
     def close(self):
         

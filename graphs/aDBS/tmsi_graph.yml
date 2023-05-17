@@ -1,7 +1,8 @@
 # timeflux example dual-input with ZeroMQ (Publishing and Subscribing)
 # PM running instructions: 
 #   run from: cd C:\Users\habetsj\Research\projects\aDBS_C04\code\pyaDBS_ReTuneC04
-#   cmd: timeflux -d graphs/example/hellodummy_ZeroMQ.yml
+# or Labor: cd C:\CODE\tasks\pyaDBS_ReTuneC04
+#   cmd: timeflux -d graphs/aDBS/tmsi_graph.yml
 # view at: http://localhost:8000/monitor/
 # TODO: solve FFT problem with x.real() with imported value in wrong float type
 # TODO: apply LSL in dummy workflow
@@ -50,7 +51,7 @@ graphs:
       module: timeflux_dsp.nodes.spectral
       class: Welch
       params:
-        rate: 2048
+        rate: 500  # use config Node to read e.g. the tmsi sampling rate (therefore the TMSi sampler node needs to write out sampling rate by default)
         nperseg: 256
     # - id: Welch_ecog
     #   module: timeflux_dsp.nodes.spectral
@@ -155,7 +156,7 @@ graphs:
       # - source: Bands_ecog:beta
       #   target: Pub_ecog_bands
       
-    rate: 0  # Run this graph 4 times per second
+    rate: 1  # Run this graph 4 times per second
 
   - id: Subscriber
     nodes:
