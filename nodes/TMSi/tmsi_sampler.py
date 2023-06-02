@@ -64,6 +64,9 @@ class Tmsisampler(Node):
         # sanity check
         self.fs = self.dev.config.sample_rate
         ch_list = self.dev.config.channels
+
+        # save CONFIG as XML file and load (load and save configuration example)
+
         print(f'detected sampling rate: {self.fs} Hz')
         print(f'n-channels detected: {len(ch_list)}')
 
@@ -74,7 +77,7 @@ class Tmsisampler(Node):
             else:
                 print(f'channel {ch.name} NOT enabled')
             
-            if 'BIP' in ch.name or 'AUX' in ch.name:
+            if 'BIP' in ch.name or 'AUX' in ch.name:  # check ch.type (ch.type_is_aux) 
                 ch.enabled = True
             else:
                 ch.enabled = False
@@ -87,10 +90,11 @@ class Tmsisampler(Node):
         # create queue and link it to SAGA device
         self.q_sample_sets = queue.Queue(maxsize=_QUEUE_SIZE)  # if maxsize=0, queue is indefinite
         sample_data_server.registerConsumer(self.dev.id, self.q_sample_sets)
+        # reshape sampler?
         print(f'TMSiSDK sample_data_server set for device: {self.dev.id}')
 
 
-        
+        self.sampling = True
 
         self.dev.start_measurement()
 
@@ -100,25 +104,35 @@ class Tmsisampler(Node):
 
     def update(self):
 
+        print(f'q-size: {self.q_sample_sets.qsize()}')
         # get available samples from queue
         sampled = self.q_sample_sets.get()
+        print(f'q-size: {self.q_sample_sets.qsize()}')  # qsize 1 smaller after get??
+        print(len(sampled.samples))
+        print(f'first 20 in q: {sampled.samples[:20]}')
+
         samples = DataFrame(data=np.array(sampled.samples),)
 
-        print(samples.shape)
 
         self.o.set(
             samples,
             # names='tsmi_samples'
         )  # has to be dataframe?
 
+        # consider TMSi filewriter
+        # # Initialise a file-writer class (Poly5-format) and state its file path
+        # file_writer = FileWriter(FileFormat.poly5, join(measurements_dir,"Example_envelope_plot.poly5"))
+
+
         self.count += 1
 
-        if self.count > 500:
+        if self.count > 50:
             print('count reached max')
             self.close()
 
+
     def close(self):
-        
+        # always run these, also in case of ctrl-c abort
         self.dev.stop_measurement()
         self.dev.close()
 
