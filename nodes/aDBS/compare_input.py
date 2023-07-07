@@ -34,16 +34,24 @@ class Compareinput(Node):
         
     
     def update(self):
-        input_value =  self.i.data.values[0, 0]
-        # print('input value:', input_value, int(input_value > self._threshold))
-        output = int(input_value > self._threshold)
-        # print('EXC THRESH', output)
+        # temporary solution for None type input
+        if self.i.data == None:
+            input_value = 0
+            output = 0
+            out_index = 0
+
+        else:
+
+            input_value =  self.i.data.values[0, 0]
+            # print('input value:', input_value, int(input_value > self._threshold))
+            output = int(input_value > self._threshold)
+            out_index = self.i.data.index
 
         # sets as pandas DataFrame
         self.o.data = DataFrame(
             data=[[input_value, output]],
             columns=['IN (biomarker)',
                      'OUT (aDBS trigger)'],
-            index=self.i.data.index
+            index=out_index
         )
         # print(self.o.data)

@@ -39,7 +39,7 @@ class Tmsisampler(Node):
         COM_port: define the port on the computer where the TTL module was installed 
     """
     def __init__(
-        self, _QUEUE_SIZE = 1000
+        self, _QUEUE_SIZE = None, MIN_SAMPLE_SIZE: int = 256,
     ):
         try:
             # Initialise the TMSi-SDK first before starting using it
@@ -57,79 +57,118 @@ class Tmsisampler(Node):
         
         # only runs when tmsi_device.initialize resulted in an initialised device (dev)
         
-        # Open a connection to the SAGA-system
-        self.dev.open()
+        try:
+            # Open a connection to the SAGA-system
+            self.dev.open()
 
 
-        # sanity check
-        self.fs = self.dev.config.sample_rate
-        ch_list = self.dev.config.channels
+            # sanity check
+            self.fs = self.dev.config.sample_rate
+            ch_list = self.dev.config.channels
 
-        # save CONFIG as XML file and load (load and save configuration example)
+            # save CONFIG as XML file and load (load and save configuration example)
 
-        print(f'detected sampling rate: {self.fs} Hz')
-        print(f'n-channels detected: {len(ch_list)}')
+            print(f'detected sampling rate: {self.fs} Hz')
+            print(f'n-channels detected: {len(ch_list)}')
+
+            self.ch_names = []  # manually create list with enabled channelnames
+
+            for i_ch, ch in enumerate(ch_list):
+                print(ch.type)
+
+                if 'BIP' in ch.name:  # check ch.type (ch.type_is_aux) 
+                    ch.enabled = True
+                
+                elif ch.type == ChannelType.AUX and ch.name in ['X', 'Y', 'Z']:
+                    ch.enabled = True
+                
+                else:
+                    ch.enabled = False
+                
+                # add enabled channel-names
+                if ch.enabled:
+                    print(f'channel # {i_ch}: {ch.name} ENABLED (type {ch.type})')   # ch.unit_name
+                    self.ch_names.append(ch.name)
+                else:
+                    print(f'channel {ch.name} NOT enabled')
+
+            self.dev.config.channels = ch_list
+            self.dev.update_sensors()
+
+            print(f'n-channels left: {len(self.dev.channels)}')
+            print(f'enabled channel-names: {self.ch_names}')
+
+            # create queue and link it to SAGA device
+            self.q_sample_sets = queue.Queue(maxsize=_QUEUE_SIZE)  # if maxsize=0, queue is indefinite
+            sample_data_server.registerConsumer(self.dev.id, self.q_sample_sets)
+            # reshape sampler?
+            print(f'TMSiSDK sample_data_server set for device: {self.dev.id}')
 
 
-        for i_ch, ch in enumerate(ch_list):
-            if ch.enabled:
-                print(f'channel # {i_ch}: {ch.name} ENABLED (type {ch.type})')   # ch.unit_name
-            else:
-                print(f'channel {ch.name} NOT enabled')
-            
-            if 'BIP' in ch.name or 'AUX' in ch.name:  # check ch.type (ch.type_is_aux) 
-                ch.enabled = True
-            else:
-                ch.enabled = False
+            self.sampling = True
 
-        self.dev.config.channels = ch_list
-        self.dev.update_sensors()
+            self.dev.start_measurement()
 
-        print(f'n-channels left: {len(self.dev.channels)}')
+            self.count = 0
 
-        # create queue and link it to SAGA device
-        self.q_sample_sets = queue.Queue(maxsize=_QUEUE_SIZE)  # if maxsize=0, queue is indefinite
-        sample_data_server.registerConsumer(self.dev.id, self.q_sample_sets)
-        # reshape sampler?
-        print(f'TMSiSDK sample_data_server set for device: {self.dev.id}')
+            self.sample_rate = self.dev.config.get_sample_rate(ChannelType.AUX)
+            print(f'SMAPLING RATE: {self.sample_rate} Hz')
 
-
-        self.sampling = True
-
-        self.dev.start_measurement()
-
-        self.count = 0
-        
+        except:
+            print('__init__ within TMSiSampler failed')
+            self.close()        
 
 
     def update(self):
 
-        print(f'q-size: {self.q_sample_sets.qsize()}')
-        # get available samples from queue
-        sampled = self.q_sample_sets.get()
-        print(f'q-size: {self.q_sample_sets.qsize()}')  # qsize 1 smaller after get??
-        print(len(sampled.samples))
-        print(f'first 20 in q: {sampled.samples[:20]}')
+        try:
+            print(f'start update count {self.count}')
+            sampled_arr = np.zeros((1, len(self.ch_names + 2)))
 
-        samples = DataFrame(data=np.array(sampled.samples),)
+            while_count = 0
+
+            while sampled_arr.shape[0] < self.MIN_SAMPLE_SIZE:
+                print(f'in WHILE: shape sampled array: {sampled_arr.shape}')
+
+                # print(f'q-size: {self.q_sample_sets.qsize()}')  # what is q-size?
+                # get available samples from queue
+                sampled = self.q_sample_sets.get()
+                self.q_sample_sets.task_done()  # obligatory second line to get sampled samples
+                # reshape samples that are given in uni-dimensional form
+                new_samples = np.reshape(sampled.samples,
+                                        (sampled.num_sample_sets,
+                                        sampled.num_samples_per_sample_set),
+                                        order='F')
+
+                sampled_arr = np.concatenate([sampled_arr, new_samples], axis=0)
+
+                while_count += 1
+
+            print(f'shape sampled df to output.set: {sampled_arr.shape}')
+            print(f'result of {while_count} while-iterations of sampling')
+
+            samples = DataFrame(data=sampled_arr,
+                                columns=self.ch_names + ['STATUS', 'COUNTER'])  # channels STATUS and COUNTER are always present
 
 
-        self.o.set(
-            samples,
-            # names='tsmi_samples'
-        )  # has to be dataframe?
+            self.o.set(
+                samples,
+                names=self.ch_names + ['STATUS', 'COUNTER'],
+            )  # has to be dataframe
 
-        # consider TMSi filewriter
-        # # Initialise a file-writer class (Poly5-format) and state its file path
-        # file_writer = FileWriter(FileFormat.poly5, join(measurements_dir,"Example_envelope_plot.poly5"))
+            # consider TMSi filewriter
+            # # Initialise a file-writer class (Poly5-format) and state its file path
+            # file_writer = FileWriter(FileFormat.poly5, join(measurements_dir,"Example_envelope_plot.poly5"))
 
 
-        self.count += 1
+            self.count += 1
 
-        if self.count > 50:
-            print('count reached max')
+            if self.count > 50:
+                print('count reached max')
+                self.close()
+
+        except:
             self.close()
-
 
     def close(self):
         # always run these, also in case of ctrl-c abort
