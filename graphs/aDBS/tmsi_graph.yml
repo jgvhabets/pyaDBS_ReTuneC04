@@ -47,23 +47,34 @@ graphs:
         _QUEUE_SIZE: 100000
       
     # SIGNAL PROCESSING NODES
-    - id: Welch_stn
+    - id: Welch_tmsi
       module: timeflux_dsp.nodes.spectral
       class: Welch
       params:
-        rate: 500  # use config Node to read e.g. the tmsi sampling rate (therefore the TMSi sampler node needs to write out sampling rate by default)
-        nperseg: 256
+        rate: 4000  # use config Node to read e.g. the tmsi sampling rate (therefore the TMSi sampler node needs to write out sampling rate by default)
+        nperseg: 2000
+    - id: Bands_tmsi
+      module: timeflux_dsp.nodes.spectral
+      class: Bands
+      params:
+        relative: True
+    # - id: Welch_stn
+    #   module: timeflux_dsp.nodes.spectral
+    #   class: Welch
+    #   params:
+    #     rate: 500  # use config Node to read e.g. the tmsi sampling rate (therefore the TMSi sampler node needs to write out sampling rate by default)
+    #     nperseg: 256
     # - id: Welch_ecog
     #   module: timeflux_dsp.nodes.spectral
     #   class: Welch
     #   params:
     #     rate: 2048
     #     nperseg: 256
-    - id: Bands_stn
-      module: timeflux_dsp.nodes.spectral
-      class: Bands
-      params:
-        relative: True
+    # - id: Bands_stn
+    #   module: timeflux_dsp.nodes.spectral
+    #   class: Bands
+    #   params:
+    #     relative: True
     # - id: Bands_ecog
     #   module: timeflux_dsp.nodes.spectral
     #   class: Bands
@@ -79,11 +90,11 @@ graphs:
     #     f_band_min: 14
     #     f_band_max: 20
     # aDBS DECISION MAKING NODES
-    - id: compare_stn
-      module: nodes.aDBS.compare_input
-      class: Compareinput
-      params:
-        input_signal: stn_beta
+    # - id: compare_stn
+    #   module: nodes.aDBS.compare_input
+    #   class: Compareinput
+    #   params:
+    #     input_signal: stn_beta
     # - id: compare_coh
     #   module: nodes.aDBS.compare_input
     #   class: Compareinput
@@ -95,6 +106,11 @@ graphs:
       class: Pub
       params:
         topic: raw_tmsi
+    - id: Pub_bands_TMSi
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: bands_tmsi
     # - id: Pub_raw_stn
     #   module: timeflux.nodes.zmq
     #   class: Pub
@@ -105,21 +121,21 @@ graphs:
     #   class: Pub
     #   params:
     #     topic: raw_ecog
-    - id: Pub_stn_bands
-      module: timeflux.nodes.zmq
-      class: Pub
-      params:
-        topic: bands_stn
+    # - id: Pub_stn_bands
+    #   module: timeflux.nodes.zmq
+    #   class: Pub
+    #   params:
+    #     topic: bands_stn
     # - id: Pub_ecog_bands
     #   module: timeflux.nodes.zmq
     #   class: Pub
     #   params:
     #     topic: bands_ecog
-    - id: Pub_stn_output
-      module: timeflux.nodes.zmq
-      class: Pub
-      params:
-        topic: stn_output
+    # - id: Pub_stn_output
+    #   module: timeflux.nodes.zmq
+    #   class: Pub
+    #   params:
+    #     topic: stn_output
     # - id: Pub_coh
     #   module: timeflux.nodes.zmq
     #   class: Pub
@@ -129,6 +145,12 @@ graphs:
       # Communicate imported Data
       - source: tmsi_sampler
         target: Pub_raw_TMSi
+      - source: tmsi_sampler
+        target: Welch_tmsi
+      - source: Welch_tmsi
+        target: Bands_tmsi
+      - source: Bands_tmsi
+        target: Pub_bands_TMSi
       # - source: ecog_import
       #   target: Pub_raw_ecog
       # Process import signals for beta-power
@@ -161,7 +183,7 @@ graphs:
       # - source: Bands_ecog:beta
       #   target: Pub_ecog_bands
       
-    rate: 0  # Run this graph 4 times per second
+    rate: 0  # Run this graph x times per second
 
   - id: Subscriber
     nodes:
@@ -169,7 +191,12 @@ graphs:
       module: timeflux.nodes.zmq
       class: Sub
       params:
-        topics: raw_tmsi   #[raw_stn, raw_ecog]
+        topics: raw_tmsi   #[raw_stn, raw_ecog]  bands_tmsi
+    - id: sub_bands_tmsi
+      module: timeflux.nodes.zmq
+      class: Sub
+      params:
+        topics: bands_tmsi
     # - id: sub_bands
     #   module: timeflux.nodes.zmq
     #   class: Sub
@@ -191,6 +218,8 @@ graphs:
     edges:
       - source: sub_raw:raw_tmsi
         target: monitor:raw_tmsi
+      - source: sub_bands_tmsi:bands_tmsi
+        target: monitor:bands_tmsi
       # - source: sub_raw:raw_ecog
       #   target: monitor:raw_ecog
       # - source: sub_bands:bands_stn

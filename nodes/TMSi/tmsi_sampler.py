@@ -39,8 +39,14 @@ class Tmsisampler(Node):
         COM_port: define the port on the computer where the TTL module was installed 
     """
     def __init__(
-        self, _QUEUE_SIZE = None, MIN_SAMPLE_SIZE: int = 256,
+        self, _QUEUE_SIZE = None, MIN_SAMPLE_SIZE: int = 4000,
     ):
+        self.MIN_SAMPLE_SIZE = MIN_SAMPLE_SIZE
+
+        #         # Close the connection to the device when the device is opened
+        # if self.dev.status.state == DeviceState.connected:
+        #     self.dev.close()
+
         try:
             # Initialise the TMSi-SDK first before starting using it
             tmsi_device.initialize()
@@ -53,7 +59,11 @@ class Tmsisampler(Node):
             if (len(discoveryList) > 0):
                 self.dev = discoveryList[0]
         except:
-            raise ValueError('SAGA not detected in tmsiSampler()')      
+            print('closing TMSi before connecting...')
+            self.dev.stop_measurement()
+            self.dev.close()
+
+               
         
         # only runs when tmsi_device.initialize resulted in an initialised device (dev)
         
@@ -69,14 +79,15 @@ class Tmsisampler(Node):
             # save CONFIG as XML file and load (load and save configuration example)
 
             print(f'detected sampling rate: {self.fs} Hz')
-            print(f'n-channels detected: {len(ch_list)}')
+            print(f'channels detected (n={len(ch_list)}): {ch_list}')
+            print(f'MIN SAMPLE SIZE: {self.MIN_SAMPLE_SIZE}')
 
             self.ch_names = []  # manually create list with enabled channelnames
 
             for i_ch, ch in enumerate(ch_list):
                 print(ch.type)
 
-                if 'BIP' in ch.name:  # check ch.type (ch.type_is_aux) 
+                if 'BIP' in ch.name or ch.type == ChannelType.BIP:  # check ch.type (ch.type_is_aux) 
                     ch.enabled = True
                 
                 elif ch.type == ChannelType.AUX and ch.name in ['X', 'Y', 'Z']:
@@ -89,8 +100,8 @@ class Tmsisampler(Node):
                 if ch.enabled:
                     print(f'channel # {i_ch}: {ch.name} ENABLED (type {ch.type})')   # ch.unit_name
                     self.ch_names.append(ch.name)
-                else:
-                    print(f'channel {ch.name} NOT enabled')
+                # else:
+                #     print(f'channel {ch.name} NOT enabled')
 
             self.dev.config.channels = ch_list
             self.dev.update_sensors()
@@ -112,7 +123,7 @@ class Tmsisampler(Node):
             self.count = 0
 
             self.sample_rate = self.dev.config.get_sample_rate(ChannelType.AUX)
-            print(f'SMAPLING RATE: {self.sample_rate} Hz')
+            print(f'SAMPLING RATE: {self.sample_rate} Hz')
 
         except:
             print('__init__ within TMSiSampler failed')
@@ -122,13 +133,12 @@ class Tmsisampler(Node):
     def update(self):
 
         try:
-            print(f'start update count {self.count}')
-            sampled_arr = np.zeros((1, len(self.ch_names + 2)))
+            # print(f'start update count {self.count}')
+            sampled_arr = np.zeros((1, len(self.ch_names) + 2))
 
             while_count = 0
 
             while sampled_arr.shape[0] < self.MIN_SAMPLE_SIZE:
-                print(f'in WHILE: shape sampled array: {sampled_arr.shape}')
 
                 # print(f'q-size: {self.q_sample_sets.qsize()}')  # what is q-size?
                 # get available samples from queue
@@ -150,6 +160,7 @@ class Tmsisampler(Node):
             samples = DataFrame(data=sampled_arr,
                                 columns=self.ch_names + ['STATUS', 'COUNTER'])  # channels STATUS and COUNTER are always present
 
+            print(samples[:5])
 
             self.o.set(
                 samples,
@@ -163,7 +174,7 @@ class Tmsisampler(Node):
 
             self.count += 1
 
-            if self.count > 50:
+            if self.count > 500:
                 print('count reached max')
                 self.close()
 
