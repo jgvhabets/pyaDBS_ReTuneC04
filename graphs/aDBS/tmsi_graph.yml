@@ -141,16 +141,19 @@ graphs:
     #   class: Pub
     #   params:
     #     topic: beta_coh  # coherence in and out
+    
     edges:  # Connect nodes WITHIN graph
+      
       # Communicate imported Data
       - source: tmsi_sampler
         target: Pub_raw_TMSi
-      - source: tmsi_sampler
-        target: Welch_tmsi
-      - source: Welch_tmsi
-        target: Bands_tmsi
-      - source: Bands_tmsi
-        target: Pub_bands_TMSi
+      # - source: tmsi_sampler:X
+      #   target: Welch_tmsi
+      # - source: Welch_tmsi
+      #   target: Bands_tmsi
+      # - source: Bands_tmsi
+      #   target: Pub_bands_TMSi
+
       # - source: ecog_import
       #   target: Pub_raw_ecog
       # Process import signals for beta-power

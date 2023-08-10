@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 
 
-print(np.array([1, 2]))
+a = np.arange(24)
+print(a)
+a = np.reshape(a, (3, 8), order='C')
 
-print(pd.DataFrame([[2, 3]], columns=['a', 'b']))
+print(a)
