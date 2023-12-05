@@ -41,7 +41,7 @@ class Tmsisampler(Node):
         COM_port: define the port on the computer where the TTL module was installed 
     """
     def __init__(
-        self, _QUEUE_SIZE = None, MIN_SAMPLE_SIZE_SEC: int = .1,
+        self, _QUEUE_SIZE = None, MIN_SAMPLE_SIZE_SEC: int = .01,
         use_LSL: bool = False,
     ):
         self.MIN_SAMPLE_SIZE_SEC = MIN_SAMPLE_SIZE_SEC
@@ -97,6 +97,7 @@ class Tmsisampler(Node):
                 # rename enabled channel-names
                 if ch.enabled:
                     print(f'channel # {i_ch}: {ch.name} ENABLED (type {ch.type})')   # ch.unit_name
+                    # adjust X Y Z without side
                     if ch.name == 'X':
                         if X_right:
                             ch.name = 'X_L'
@@ -124,6 +125,9 @@ class Tmsisampler(Node):
 
             print(f'n-channels left: {len(self.dev.channels)}')
             print(f'enabled channel-names: {self.ch_names}')
+
+            # self.CH_SEL['ACC_L'] = [c in ['X_L', 'Y_L', 'Z_L'] for c in self.ch_names] + [False, False]
+            # self.CH_SEL['ACC_R'] = [c in ['X_R', 'Y_R', 'Z_R'] for c in self.ch_names] + [False, False]
 
             # create queue and link it to SAGA device
             self.q_sample_sets = queue.Queue(maxsize=_QUEUE_SIZE)  # if maxsize=0, queue is indefinite
@@ -154,11 +158,10 @@ class Tmsisampler(Node):
         # Getting the current date and time
         dt_start = datetime.now(tz=timezone.utc)
         dt_start = dt_start.astimezone()
-        print(dt_start)
         
         sampled_arr = np.zeros((1, len(self.ch_names) + 2))
 
-        while_count = 0
+        # while_count = 0
 
         while sampled_arr.shape[0] < (self.fs * self.MIN_SAMPLE_SIZE_SEC):
 
@@ -173,7 +176,7 @@ class Tmsisampler(Node):
 
             sampled_arr = np.concatenate([sampled_arr, new_samples], axis=0)
 
-            while_count += 1
+            # while_count += 1
 
         # get timestamps whenever buffer is ready to be outputted
         txdelta = timedelta(seconds=1 / self.sample_rate)
@@ -199,11 +202,11 @@ class Tmsisampler(Node):
         # file_writer = FileWriter(FileFormat.poly5, join(measurements_dir,"Example_envelope_plot.poly5"))
 
 
-        self.count += 1
+        # self.count += 1
 
-        if self.count > 500:
-            print('count reached max')
-            self.close()
+        # if self.count > 500:
+        #     print('count reached max')
+        #     self.close()
 
 
     def close(self):

@@ -51,8 +51,8 @@ graphs:
       module: timeflux_dsp.nodes.spectral
       class: Welch
       params:
-        rate: 4000  # use config Node to read e.g. the tmsi sampling rate (therefore the TMSi sampler node needs to write out sampling rate by default)
-        nperseg: 2000
+        rate: 4096  # use config Node to read e.g. the tmsi sampling rate (therefore the TMSi sampler node needs to write out sampling rate by default)
+        nperseg: 500
     - id: Bands_tmsi
       module: timeflux_dsp.nodes.spectral
       class: Bands
@@ -147,12 +147,12 @@ graphs:
       # Communicate imported Data
       - source: tmsi_sampler
         target: Pub_raw_TMSi
-      # - source: tmsi_sampler:X
-      #   target: Welch_tmsi
-      # - source: Welch_tmsi
-      #   target: Bands_tmsi
-      # - source: Bands_tmsi
-      #   target: Pub_bands_TMSi
+      - source: tmsi_sampler:X_L
+        target: Welch_tmsi
+      - source: Welch_tmsi
+        target: Bands_tmsi
+      - source: Bands_tmsi
+        target: Pub_bands_TMSi
 
       # - source: ecog_import
       #   target: Pub_raw_ecog
@@ -195,7 +195,7 @@ graphs:
       class: Sub
       params:
         topics: raw_tmsi   #[raw_stn, raw_ecog]  bands_tmsi
-    - id: sub_bands_tmsi
+    - id: sub_bands
       module: timeflux.nodes.zmq
       class: Sub
       params:
@@ -221,7 +221,7 @@ graphs:
     edges:
       - source: sub_raw:raw_tmsi
         target: monitor:raw_tmsi
-      - source: sub_bands_tmsi:bands_tmsi
+      - source: sub_bands:bands_tmsi
         target: monitor:bands_tmsi
       # - source: sub_raw:raw_ecog
       #   target: monitor:raw_ecog
@@ -233,4 +233,4 @@ graphs:
       #   target: monitor:stn_output
       # - source: sub_coh:beta_coh
       #   target: monitor:beta_coh
-    rate: 1
+    rate: 0
