@@ -60,8 +60,7 @@ class Tmsisampler(Node):
                 self.dev = discoveryList[0]
         except:
             print('closing TMSi before connecting...')
-            self.dev.stop_measurement()
-            self.dev.close()
+            self.close()  # stops measurement and closes dev
 
                        
         try:
@@ -69,12 +68,12 @@ class Tmsisampler(Node):
             self.dev.open()
 
             # sanity check
-            self.fs = self.dev.config.sample_rate
+            self.sfreq = self.dev.config.sample_rate
             self.ch_list = self.dev.config.channels
 
             # save CONFIG as XML file and load (load and save configuration example)
-            print(f'detected sampling rate: {self.fs} Hz')
-            print(f'channels detected (n={len(self.ch_list)}): {self.ch_list}')
+            print(f'detected sampling rate: {self.sfreq} Hz')
+            print(f'channels detected (n={len(self.ch_list)}): {[c.name for c in self.ch_list]}')
             print(f'MIN SAMPLE SIZE: {self.MIN_SAMPLE_SIZE_SEC} seconds')
             print(f'use LSL stream: {self.use_LSL}')
 
@@ -123,7 +122,8 @@ class Tmsisampler(Node):
             self.dev.config.channels = self.ch_list
             self.dev.update_sensors()
 
-            print(f'n-channels left: {len(self.dev.channels)}')
+            self.n_channels = len(self.dev.channels)
+            print(f'channels left (n={self.n_channels}): {[ch.name for ch in self.dev.channels]}')
             print(f'enabled channel-names: {self.ch_names}')
 
             # self.CH_SEL['ACC_L'] = [c in ['X_L', 'Y_L', 'Z_L'] for c in self.ch_names] + [False, False]
@@ -139,9 +139,6 @@ class Tmsisampler(Node):
 
             self.count = 0
 
-            self.sample_rate = self.dev.config.get_sample_rate(ChannelType.AUX)
-            print(f'SAMPLING RATE: {self.sample_rate} Hz')
-
             if self.use_LSL:
                 # Initialise the lsl-stream
                 self.stream = FileWriter(FileFormat.lsl, "SAGA")
@@ -150,69 +147,123 @@ class Tmsisampler(Node):
 
         except:
             print('__init__ within TMSiSampler failed')
-            self.close()        
+            # Close the file writer after GUI termination
+            self.close()  # closes both dev.measurement and dev itself         
 
 
     def update(self):
-
-        # Getting the current date and time
-        dt_start = datetime.now(tz=timezone.utc)
-        dt_start = dt_start.astimezone()
         
-        sampled_arr = np.zeros((1, len(self.ch_names) + 2))
-
-        # while_count = 0
-
-        while sampled_arr.shape[0] < (self.fs * self.MIN_SAMPLE_SIZE_SEC):
-
+        try:
+            # Getting the current date and time
+            dt_start = datetime.now(tz=timezone.utc)
+            dt_start = dt_start.astimezone()
+            
+            # sampled_arr = np.zeros((1, len(self.dev_channels)))
+            
             # get available samples from queue
             sampled = self.q_sample_sets.get()
             self.q_sample_sets.task_done()  # obligatory second line to get sampled samples
+            sampled_arr = sampled.samples
+
+            # while sampled_arr.shape[0] < (self.fs * self.MIN_SAMPLE_SIZE_SEC):
+            while (len(sampled_arr) / self.n_channels) < (self.sfreq * self.MIN_SAMPLE_SIZE_SEC):
+                # get available samples from queue
+                sampled = self.q_sample_sets.get()
+                self.q_sample_sets.task_done()  # obligatory second line to get sampled samples
+
+                sampled_arr = np.concatenate(sampled_arr, sampled.samples)
+
+            # # reshape samples that are given in uni-dimensional form
+            # new_samples = np.reshape(sampled.samples,
+            #                          (sampled.num_sample_sets,
+            #                           sampled.num_samples_per_sample_set),
+            #                           order='C')
             # reshape samples that are given in uni-dimensional form
-            new_samples = np.reshape(sampled.samples,
-                                    (sampled.num_sample_sets,
-                                     sampled.num_samples_per_sample_set),
-                                     order='C')
+            sampled_arr = np.reshape(sampled_arr,
+                                     (len(sampled_arr) // sampled.num_samples_per_sample_set,
+                                      sampled.num_samples_per_sample_set),
+                                      order='C')
 
-            sampled_arr = np.concatenate([sampled_arr, new_samples], axis=0)
+            # sampled_arr = np.concatenate([sampled_arr, new_samples], axis=0)
 
-            # while_count += 1
+                # while_count += 1
 
-        # get timestamps whenever buffer is ready to be outputted
-        txdelta = timedelta(seconds=1 / self.sample_rate)
-        t_array = np.array([dt_start + (np.arange(sampled_arr.shape[0]) * txdelta)]).ravel()  # create timestamp list with timedelta of sampling freq, for correct shape
+            # get timestamps whenever buffer is ready to be outputted
+            txdelta = timedelta(seconds=1 / self.sfreq)
+            t_array = np.array([dt_start + (np.arange(sampled_arr.shape[0]) * txdelta)]).ravel()  # create timestamp list with timedelta of sampling freq, for correct shape
 
-        t_stop = datetime.now(tz=timezone.utc)
-        # print(f'time @ stop: {t_stop}, last time in df: {t_array[-1]}')
-        # print(f'shape sampled df to output.set: {sampled_arr.shape}')
-        # print(f'result of {while_count} while-iterations of sampling')
+            t_stop = datetime.now(tz=timezone.utc)
+            # print(f'time @ stop: {t_stop}, last time in df: {t_array[-1]}')
+            # print(f'shape sampled df to output.set: {sampled_arr.shape}')
+            # print(f'result of {while_count} while-iterations of sampling')
 
-        samples = DataFrame(data=sampled_arr[:, :-2],
-                            columns=self.ch_names,
-                            index=t_array)  # left out channels STATUS and COUNTER are always present
-        # print(samples.iloc[:5])
-        self.o.set(
-            samples,
-            names=self.ch_names,
-            timestamps=t_array
-        )  # has to be dataframe
+            samples = DataFrame(data=sampled_arr[:, :-2],
+                                columns=self.ch_names,
+                                index=t_array)  # left out channels STATUS and COUNTER are always present
+            # print(samples.iloc[:5])
+            self.o.set(
+                samples,
+                names=self.ch_names,
+                timestamps=t_array
+            )  # has to be dataframe
 
-        # consider TMSi filewriter
-        # # Initialise a file-writer class (Poly5-format) and state its file path
-        # file_writer = FileWriter(FileFormat.poly5, join(measurements_dir,"Example_envelope_plot.poly5"))
+            # consider TMSi filewriter
+            # # Initialise a file-writer class (Poly5-format) and state its file path
+            # file_writer = FileWriter(FileFormat.poly5, join(measurements_dir,"Example_envelope_plot.poly5"))
 
 
-        # self.count += 1
+            # self.count += 1
 
-        # if self.count > 500:
-        #     print('count reached max')
-        #     self.close()
+            # if self.count > 500:
+            #     print('count reached max')
+            #     self.close()
+        except:
+            self.close()
+
 
 
     def close(self):
         # always run these, also in case of ctrl-c abort
+        if self.use_LSL:
+                # Initialise the lsl-stream
+                self.stream.close()
+
         self.dev.stop_measurement()
         self.dev.close()
+
+    # BACKUP CODE FOR CLOSING TMSI DEV
+    # try:
+    #     while True:
+    #         continue
+    # except KeyboardInterrupt:
+    #     # This be executed when Ctrl+C is pressed
+    #     pass
+    # finally:
+    #     # Close the file writer after GUI termination
+    #     stream.close()
+    #     dev.stop_measurement()
+    #     # Close the connection to the SAGA device
+    #     dev.close()    
+
+    # except TMSiError as e:
+
+    #     print("!!! TMSiError !!! : ", e.code)
+
+    #     if (e.code == TMSiErrorCode.device_error) :
+
+    #         print("  => device error : ", hex(dev.status.error))
+
+    #         DeviceErrorLookupTable(hex(dev.status.error))
+    #     dev.stop_measurement()
+    #     dev.close()    
+
+    # finally:
+
+    #     # Close the connection to the device when the device is opened
+
+    #     if dev.status.state == DeviceState.connected:
+    #         dev.stop_measurement()
+    #         dev.close()
 
 
 if __name__ == '__main__':
