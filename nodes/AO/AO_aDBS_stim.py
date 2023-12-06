@@ -7,6 +7,7 @@ chronic stim source: https://github.com/jlbusch/C04/blob/dev/stim_AO/stim_AO.m
 """
 
 # import public packages
+import cython
 from pandas import DataFrame
 # from dataclasses import dataclass
 from timeflux.core.node import Node
@@ -58,12 +59,12 @@ class AO_stim(Node):
 
         # connect to AO
         ## TODO: find function on Labor PC; 'C:\CODE\Neuro Omega System SDK' 
-        # macNO = 'F4:5E:AB:6B:6D:A1'
-        # AO_DefaultStartConnection(macNO)
-        # assert AO_IsConnected() == 1, (
-        #     'Connection to NeuroOmega failed'
-        # )
-        # print('Connection to NeuroOmega established! :)') 
+        macNO = 'F4:5E:AB:6B:6D:A1'
+        AO_DefaultStartConnection(macNO)
+        assert AO_IsConnected() == 1, (
+            'Connection to NeuroOmega failed'
+        )
+        print('Connection to NeuroOmega established! :)') 
 
 
         ### SET STARTING STATES
