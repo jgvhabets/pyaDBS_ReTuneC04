@@ -2,7 +2,9 @@
 Establish connection with TMSi SAFA
 device, to collect data samples from.
 
-Extracted from https://gitlab.com/tmsi/tmsi-python-interface/
+Adjusted from https://gitlab.com/tmsi/tmsi-python-interface/
+
+to test stand alone on WIN: python -m  nodes.TMSi.tmsi_sampler
 """
 
 # import sys
@@ -14,20 +16,16 @@ import queue
 from datetime import datetime, timedelta, timezone
 # import serial
 
-from timeflux.core.node import Node
-
 from nodes.TMSi.add_tmsi_repo import add_tmsi_repo
 add_tmsi_repo()
+
+from timeflux.core.node import Node
 
 from TMSiSDK import tmsi_device, get_config, sample_data_server
 from TMSiSDK.device import DeviceInterfaceType, ChannelType, DeviceState
 from TMSiSDK.error import TMSiError, TMSiErrorCode, DeviceErrorLookupTable
 from TMSiFileFormats.file_writer import FileWriter, FileFormat
-
-
-
 from TMSiPlugins.external_devices.usb_ttl_device import USB_TTL_device, TTLError
-
 
 
 class Tmsisampler(Node):
@@ -49,6 +47,7 @@ class Tmsisampler(Node):
 
         try:
             # Initialise the TMSi-SDK first before starting using it
+            print('\t...trying to initialize TMSi device...')
             tmsi_device.initialize()
             
             # Execute a device discovery. This returns a list of device-objects for every discovered device.
@@ -59,7 +58,7 @@ class Tmsisampler(Node):
             if (len(discoveryList) > 0):
                 self.dev = discoveryList[0]
         except:
-            print('closing TMSi before connecting...')
+            print('\t...closing TMSi before connecting...')
             self.close()  # stops measurement and closes dev
 
                        
@@ -268,6 +267,7 @@ class Tmsisampler(Node):
 
 if __name__ == '__main__':
     # execute
+    print('START MAIN CMD-EXECUTE FUNCTION')
     Tmsisampler()
 
 
