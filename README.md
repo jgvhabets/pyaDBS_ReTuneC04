@@ -21,9 +21,16 @@ timeflux, py-newronika interface, and py-TMSi interface.
   - `pip install pyserial`
   - `pip install PySide2`
   - `pip install pyqtgraph`
+  - Download or clone <a href="https://gitlab.com/tmsi/tmsi-python-interface">TMSi Python Interface from GitLab</a>
+    in `REPO\packages\`
+
+
+- for AlphaOmega:
+  - `neuroomega_matlab` folder in `REPO\packages`
+  - ensure that correct env is activated! Execute without charite proxies (!)
+  - `cd REPO\packages\neuroomega_matlab`, `pip install -e .`  (pip install the package editable)
 
   
-- Download or clone <a href="https://gitlab.com/tmsi/tmsi-python-interface">TMSi Python Interface from GitLab</a>.   
 
 
 ### Important Notes

@@ -8,6 +8,10 @@ __pycache__/
 .DS_Store
 */.DS_Store
 
+packages/neuroomega_matlab/
+packages/tmsi-python-interface-main/
+
+
 # C extensions
 *.so
 
@@ -31,6 +35,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
