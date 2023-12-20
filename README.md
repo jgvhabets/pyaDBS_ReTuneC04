@@ -26,10 +26,14 @@ timeflux, py-newronika interface, and py-TMSi interface.
 
 
 - for AlphaOmega:
-  - `neuroomega_matlab` folder in `REPO\packages`
+  - succesfully install matlabengine before installing neuroomega_matlab (!), see next heading
+  - `conda install flit-core` (not 100% sure)
+  - `neuroomega_matlab` folder in `REPO\packages` (including pyproject.toml and src)
   - ensure that correct env is activated! Execute without charite proxies (!)
   - `cd REPO\packages\neuroomega_matlab`, `pip install -e .`  (pip install the package editable)
 
+- for matlabengine
+  - for MATLAB version R2021b: pip install matlabengine==9.11.21
   
 
 
@@ -38,6 +42,7 @@ timeflux, py-newronika interface, and py-TMSi interface.
 - don't use camelBack typing for Classnames, rather capitals at first letter
 - stick with normal python classes to avoid problematic inheritance from normal classes into dataclasses
 - always include time index in output (update()) to print in monitor
+- in case of windows 10 pip install issues: https://stackoverflow.com/questions/52815784/python-pip-raising-newconnectionerror-while-installing-libraries 
  
 ### Contributors:
 - <a href="https://github.com/jgvhabets">Jeroen Habets</a> 

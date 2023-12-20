@@ -12,9 +12,9 @@ from timeflux.core.node import Node
 
 # import custom neuroomega matlab wrapper (credits: Richard Koehler) (located in REPO/packages/neuroomega_matlab)
 import neuroomega_matlab as no
-
+print('imported neuroomega_matlab')
 # import repo functions
-from .AO_get_connection import (
+from AO_get_connection import (
     connect_AO,
     apply_and_stop_test_stim
 )
@@ -30,7 +30,7 @@ class AO_stim(Node):
         self, macNO = 'F4:5E:AB:6B:6D:A1',
         AO_connection: str = 'matlab',
     ):
-        # connect to AO    
+        # connect to AO
         self.no_engine = connect_AO(AO_connection=AO_connection,
                                     AO_MAC=macNO)
 
@@ -77,3 +77,10 @@ class AO_stim(Node):
     def close(self):
         closed = self.no_engine.AO_CloseConnection()
         print('closed NeuroOmega connection')
+
+
+
+# try from command line
+if __name__ == '__main__':
+    print('command line run AO_stim_matlab class')
+    AO_stim()

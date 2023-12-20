@@ -11,6 +11,7 @@ def connect_AO(AO_connection: str = 'MATLAB',
     
     assert AO_connection.upper() in ['MATLAB', 'C'], 'invalid AO_connection'
     
+    print(f'...connecting AO via {AO_connection}')
     if AO_connection.upper() == 'MATLAB':
         # use AO matlab wrapper
         no_engine = no.get_engine()
