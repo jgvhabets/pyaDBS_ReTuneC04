@@ -10,7 +10,7 @@ import numpy as np
 # from dataclasses import dataclass
 from timeflux.core.node import Node
 
-
+from nodes.TMSi.tmsi_utils import sig_vector_magn
 
 class Compareinput(Node):
     """
@@ -30,6 +30,7 @@ class Compareinput(Node):
             self._threshold = .6
         elif input_signal == 'acc_movement':
             self._threshold = 'ACC_to_set'
+            self.MARKER_FUNC = sig_vector_magn  # define dynamically which MARKER_CALC function to use  
 
         else:
             raise ValueError(f'incorrect input_signal defined')
@@ -41,55 +42,58 @@ class Compareinput(Node):
         
     
     def update(self):
+        # print(f'\nCOMPARE DATA INPUT is type: {type(self.i.data)}')
+        # print(f'content:\n{self.i.data}')
+        
         # temporary solution for None type input
-        if self.i.data == None:
-            print('no input data received')
+        if not isinstance(self.i.data, DataFrame):
+            print('no input data received ("i.data" is not DataFrame)')
             self.set_default_empty_output()
 
+        
+        # recognize threshold to set on string type
+        elif isinstance(self._threshold, str):
 
-        # define ACC-threshold over 5 seconds of rest
-        if isinstance(self._threshold, str):
-            if self._threshold == 'ACC_to_set...':
-                baseline_arr = self.i.data.values.ravel()
+            # define ACC-threshold over 5 seconds of rest
+            if self._threshold == 'ACC_to_set':
+                print('START SETTING THRESHOLD ACC')
+                self.baseline_arr = self.i.data.values[:, 0]  # possibly select input data by column name
                 setattr(self, '_threshold', 'ACC_setting')
-                print('...still defining ACC threshold')
+                print('...defining ACC threshold')
                 self.set_default_empty_output()
 
-            elif self._threshold == 'ACC_seting...':
-                new_samples = self.i.data.values.ravel()
-                baseline_arr = np.concatenate([baseline_arr, new_samples])
+            elif self._threshold == 'ACC_setting':
+                new_samples = self.i.data.values[:, 0]
+                self.baseline_arr = np.concatenate([self.baseline_arr, new_samples])
                 # calculate baseline on 5 seconds
-                if len(baseline_arr) < 5 * self.sfreq:
-                    print(f'...still defining ACC threshold (baseline size: {len(baseline_arr)})')
+                if len(self.baseline_arr) < 5 * self.sfreq:
+                    print(f'...still defining ACC threshold (baseline size: {len(self.baseline_arr)})')
                     self.set_default_empty_output()
                     
                 else:
-                    vector_magn = np.sqrt(baseline_arr ** 2)
-                    setattr(self, '_threshold', vector_magn)
+                    thresh = self.MARKER_FUNC(self.baseline_arr)
+                    setattr(self, '_threshold', thresh)
                     print(f'\n....ACC THRESHOLD SET AT {self._threshold}')
                     self.set_default_empty_output()
         
-        # if threshold is set
+        # if threshold is set and input is not None
         else:
             # get input values out of "i"
-            input_value =  self.i.data.values[0, 0]
-            # calculate sign vector magn
-            if self.input_signal == 'ACC_movement':
-                input_value = np.sqrt(input_value.ravel() ** 2)
+            input_sig =  self.i.data.values[:, 0]
+            # calculate marker based on input_sig
+            marker_value = self.MARKER_FUNC(input_sig)
             # compare calculated input signal
-            output = int(input_value > self._threshold)
-            out_index = self.i.data.index
+            output = int(marker_value > self._threshold)
+            out_index = [self.i.data.index[-1]]
             # PM: update with real-time timestamp?
+            print(f'THRESH: {self._threshold}, MARKER: {marker_value}, DECISION: {output} (idx: {out_index})')
             
-            # print('input value:', input_value, int(input_value > self._threshold))
-
             # sets as pandas DataFrame
             self.o.data = DataFrame(
                 data=[[output]],
                 columns=['STIM'],
                 index=out_index
             )
-            # print(self.o.data)
     
 
     def set_default_empty_output(self):
@@ -101,5 +105,5 @@ class Compareinput(Node):
         self.o.data = DataFrame(
             data=[[output]],
             columns=['OUT (aDBS trigger)'],
-            index=out_index
+            index=[out_index]
         )

@@ -18,6 +18,7 @@ import queue, json, time
 # add tmsi repo to path
 from nodes.TMSi.add_tmsi_repo import add_tmsi_repo
 add_tmsi_repo()
+import nodes.TMSi.tmsi_utils as tmsi_utils
 
 # tmsi repo
 from timeflux.core.node import Node
@@ -38,78 +39,82 @@ class Tmsisampler(Node):
         self.cfg = cfg
         self.counter = 0
 
-        try:
-            # Initialise the TMSi-SDK first before starting using it
-            print('\t...trying to initialize TMSi-SDK...')
-            tmsi_device.initialize()
-            print('\t...TMSi-SDK initialized...')
+        # try:
+        # Initialise the TMSi-SDK first before starting using it
+        print('\t...trying to initialize TMSi-SDK...')
+        tmsi_device.initialize()
+        print('\t...TMSi-SDK initialized...')
 
-            print('\t...Discovering devices...')
-            # Execute a device discovery. This returns a list of device-objects for every discovered device.
-            discoveryList = tmsi_device.discover(tmsi_device.DeviceType.saga, 
-                                                 DeviceInterfaceType.docked, 
-                                                 DeviceInterfaceType.usb)
+        print('\t...Discovering devices...')
+        # Execute a device discovery. This returns a list of device-objects for every discovered device.
+        discoveryList = tmsi_device.discover(tmsi_device.DeviceType.saga, 
+                                                DeviceInterfaceType.docked, 
+                                                DeviceInterfaceType.usb)
 
-            # Get the handle to the first discovered device.
-            if (len(discoveryList) > 0):
-                self.dev = discoveryList[0]
-            print(f'\t...Found {discoveryList[0]}')
+        # Get the handle to the first discovered device.
+        if (len(discoveryList) > 0):
+            self.dev = discoveryList[0]
+        print(f'\t...Found {discoveryList[0]}')
 
-            # Check if connection to SAGA is not already open
-            if self.dev.status.state == DeviceState.disconnected:
-                # Open a connection to the SAGA
-                print('\t...opening connection to SAGA...')
-                self.dev.open()
-                print('\t...Connection to SAGA established...')
-            else:
-                # Connection already open
-                print('\t...Connection to SAGA already established, will not attempt to re-open...')
+        # Check if connection to SAGA is not already open
+        if self.dev.status.state == DeviceState.disconnected:
+            # Open a connection to the SAGA
+            print('\t...opening connection to SAGA...')
+            self.dev.open()
+            print('\t...Connection to SAGA established...')
+        else:
+            # Connection already open
+            print('\t...Connection to SAGA already established, will not attempt to re-open...')
 
-            print('\t...Updating SAGA configuration...')
-            # display original enabled channels and sampling rate
-            print(f'Original  sampling rate: {self.dev.config.sample_rate} Hz')
-            print(f'Original active channels (n={len(self.dev.channels)}):')
-            for idx, ch in enumerate(self.dev.channels):
-                print('[{0}] : [{1}] in [{2}]'.format(idx, ch.name, ch.unit_name))
+        print('\t...Updating SAGA configuration...')
+        # display original enabled channels and sampling rate
+        print(f'Original  sampling rate: {self.dev.config.sample_rate} Hz')
+        print(f'Original active channels (n={len(self.dev.channels)}):')
+        
+        for idx, ch in enumerate(self.dev.channels):
+            print(f'channel # {idx} : "{ch.name}" in {ch.unit_name}')
 
-            # activate channels given as recording_channels in the cfg
-            self.ch_names = self.dev.config.channels 
-            for channel in self.ch_names:
-                if channel.name in self.cfg['rec']['tmsi']['recording_channels']:
-                    channel.enabled = True
-                else:
-                    channel.enabled = False
-            self.dev.config.channels = self.ch_names
+        # Retrieve all channels from the device and update which should be enabled
+        self.channels = self.dev.config.channels
+        self.channels = tmsi_utils.correct_ACC_channelnames(self.channels)
 
-            # set sampling rate
-            self.dev.config.set_sample_rate(ChannelType.all_types, self.cfg['rec']['tmsi']['sampling_rate_divider'])
+        # activate channels given as recording_channels in the cfg
+        tmsi_utils.activate_channel_selection(self)
 
-            # display updated enabled channels and sampling rate
-            print(f'Updated sampling rate: {self.dev.config.sample_rate} Hz')
-            print(f'Updated active channels (n={len(self.dev.channels)}):')
-            for idx, ch in enumerate(self.dev.channels):
-                print('[{0}] : [{1}] in [{2}]'.format(idx, ch.name, ch.unit_name))
+        # update changes
+        self.dev.config.channels = self.channels
+        # self.update_sensors()
 
-            for type in ChannelType:
-                if (type != ChannelType.unknown) and (type != ChannelType.all_types):
-                    print('{0} = {1} Hz'.format(str(type), self.dev.config.get_sample_rate(type)))
+        # set sampling rate
+        self.dev.config.set_sample_rate(ChannelType.all_types, self.cfg['rec']['tmsi']['sampling_rate_divider'])
+        self.sfreq = self.dev.config.sample_rate
 
-            # create queue and link it to SAGA device
-            self.queue = queue.Queue(maxsize=self.cfg['rec']['tmsi']['queue_size'])  # if maxsize=0, queue is indefinite
-            sample_data_server.registerConsumer(self.dev.id, self.queue)
+        # display updated enabled channels and sampling rate
+        print(f'Updated sampling rate: {self.sfreq} Hz')
+        print(f'Updated active channels (n={len(self.dev.channels)}):')
+        for idx, ch in enumerate(self.dev.channels):
+            print(f'channel # {idx} : "{ch.name}" in {ch.unit_name}')
 
-            # start sampling on tmsi
-            self.dev.start_measurement()
+        for type in ChannelType:
+            if (type != ChannelType.unknown) and (type != ChannelType.all_types):
+                print(f'{str(type)} = {self.dev.config.get_sample_rate(type)} Hz')
 
-            if self.cfg['rec']['tmsi']['use_lsl']:
-                # Initialise the lsl-stream
-                self.stream = FileWriter(FileFormat.lsl, "SAGA")
-                # Pass the device information to the LSL stream.
-                self.stream.open(self.dev)
+        # create queue and link it to SAGA device
+        self.queue = queue.Queue(maxsize=self.cfg['rec']['tmsi']['queue_size'])  # if maxsize=0, queue is indefinite
+        sample_data_server.registerConsumer(self.dev.id, self.queue)
 
-        except:
-            print('\t...__init__ within TMSiSampler failed...')
-            self.close()  # closes both dev.measurement and dev itself
+        # start sampling on tmsi
+        self.dev.start_measurement()
+
+        if self.cfg['rec']['tmsi']['use_lsl']:
+            # Initialise the lsl-stream
+            self.stream = FileWriter(FileFormat.lsl, "SAGA")
+            # Pass the device information to the LSL stream.
+            self.stream.open(self.dev)
+
+        # except:
+        #     print('\t...__init__ within TMSiSampler failed...')
+        #     self.close()  # closes both dev.measurement and dev itself
 
     def update(self):
 
@@ -128,12 +133,9 @@ class Tmsisampler(Node):
             # Compute timestamps for recently fetched samples
             txdelta = timedelta(seconds=1 / self.dev.config.sample_rate) # time interval (i.e., 1/fs)
             t_array = np.flip(np.array([dt - (np.arange(sampled_arr.shape[0]/len(self.dev.channels)) * txdelta)]).ravel()) # create timestamp list with current timestamp as the latest timepoint
-            print(f'beginning time array: {t_array[:5]}')
-            print(f'end of time array: {t_array[-5:]}')
-
+            
             dt = datetime.now(tz=timezone.utc) # current time
-            print(f'after creating timestamps: {dt}') 
-
+            
             # reshape samples that are given in uni-dimensional form
             sampled_arr = np.reshape(sampled_arr,
                                      (len(sampled_arr) // len(self.dev.channels),

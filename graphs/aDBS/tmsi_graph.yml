@@ -31,7 +31,7 @@ graphs:
       module: timeflux_dsp.nodes.spectral
       class: Welch
       params:
-        rate: 4000  # use config Node to read e.g. the tmsi sampling rate (therefore the TMSi sampler node needs to write out sampling rate by default)
+        rate: 1024  # use config Node to read e.g. the tmsi sampling rate (therefore the TMSi sampler node needs to write out sampling rate by default)
         nperseg: 500
     - id: Bands_tmsi
       module: timeflux_dsp.nodes.spectral
@@ -93,7 +93,7 @@ graphs:
       class: Pub
       params:
         topic: raw_tmsi
-    - id: Pub_compare_acc
+    - id: Pub_acc_output
       module: timeflux.nodes.zmq
       class: Pub
       params:
@@ -196,7 +196,7 @@ graphs:
       # - source: Bands_ecog:beta
       #   target: Pub_ecog_bands
       
-    rate: 0  # Run this graph x times per second
+    rate: 4  # Run this graph x times per second
 
   # defines streams to be collected by nodes
   - id: Subscriber

@@ -17,6 +17,7 @@ def connect_AO(AO_connection: str = 'MATLAB',
         no_engine = no.get_engine()
 
         if no_engine.AO_IsConnected():
+            print('NeurOmega is already connected, connection is now closed')
             no_engine.AO_CloseConnection()
         
         no_engine.AO_DefaultStartConnection(AO_MAC)
@@ -43,23 +44,24 @@ def connect_AO(AO_connection: str = 'MATLAB',
 
 
 def apply_and_stop_test_stim(no_engine):
-
+    print('apply TEST stimulation in init')
+    
     try:
         # apply short test stim
         no_engine.AO_DefaultStimulation(
-            StimFreqRight=130,
-            StimAmpRight_mA=0.5,
-            StimFreqLeft=23,
-            StimAmpLeft_mA=0.5,
-            Duration_Sec=10.0,
+            130,  # StimFreqRight
+            0.5,  # StimAmpRight_mA
+            23,  # StimFreqLeft
+            0.5,  # StimAmpLeft_mA
+            10.0,  # Duration_Sec
         )
         print('test stim succesfully started')
 
-        for i in range(5): time.sleep(5)  # wait for 5 seconds
+        time.sleep(5)  # wait for 5 seconds
 
-        no_engine.AO_DefaultStopStimulation()
-        print('test stim succesfully started')
+        _ = no_engine.AO_DefaultStopStimulation()  # return intern matlab value (no content)
+        print('test stim succesfully stopped')
 
     except:
         print('Error caused in test stim, NO being closed...')
-        closed = no_engine.AO_CloseConnection()
+        _ = no_engine.AO_CloseConnection()

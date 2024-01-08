@@ -31,6 +31,7 @@ timeflux, py-newronika interface, and py-TMSi interface.
   - `neuroomega_matlab` folder in `REPO\packages` (including pyproject.toml and src)
   - ensure that correct env is activated! Execute without charite proxies (!)
   - `cd REPO\packages\neuroomega_matlab`, `pip install -e .`  (pip install the package editable)
+  - required default scripts: AO_DefaultStopStimulation, and edited version of AO_DefaultStimulation
 
 - for matlabengine
   - for MATLAB version R2021b: pip install matlabengine==9.11.21
