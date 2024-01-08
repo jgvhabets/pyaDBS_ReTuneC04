@@ -6,20 +6,33 @@ from numpy import logical_or
 
 def add_tmsi_repo():
         
-    tmsi_repo_name = 'tmsi-python-interface'
+    # tmsi_repo_name = 'tmsi-python-interface'
     main_repo_name = 'pyaDBS_ReTuneC04'
     dir = getcwd()
     
+    # set repo directory as dir
     for i in range(20):
 
         if not logical_or('packages' in listdir(dir),
                           dir.endswith(main_repo_name)):
                           
             dir = dirname(dir)
-    # packages folder is found
-    else:
-        tmsi_path = join(dir, 'packages', tmsi_repo_name)
-        assert exists(tmsi_path), f'non-existing tmsi-path: {tmsi_path}'
-        sys.path.append(tmsi_path)
+    packages_dir = join(dir, 'packages')
 
-    return f'added PATH: {join(dir, tmsi_repo_name)}'
+    assert exists(packages_dir), ('packages folder not found, '
+                                  'check working directory of execution')
+
+    # packages folder is found
+    try:
+        tmsi_foldername = [f for f in listdir(packages_dir)
+                           if f.startswith('tmsi-python')][0]
+    except:
+        raise FileNotFoundError('tmsi-python folder not found in "repo/packages/"')
+    
+    tmsi_path = join(packages_dir, tmsi_foldername)
+
+    assert exists(tmsi_path), f'non-existing tmsi-path: {tmsi_path}'
+    
+    sys.path.append(tmsi_path)
+
+    print(f'added TMSi-packages PATH: {tmsi_path}')

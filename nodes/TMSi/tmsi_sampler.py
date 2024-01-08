@@ -116,7 +116,7 @@ class Tmsisampler(Node):
         try:
 
             dt = datetime.now(tz=timezone.utc) # current time
-            print(f'at start of update block: {dt}') 
+            # print(f'at start of update block: {dt}') 
 
             # Get samples from SAGA
             sampled_arr = np.array([])

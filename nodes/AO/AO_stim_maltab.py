@@ -45,13 +45,12 @@ class AO_stim(Node):
     def update(self):
         # is executed every time its activated by timeflux graph
         input_value =  self.i.data.values[0, 0]
-        # print('input value:', input_value, int(input_value > self._threshold))
-        output = int(input_value > self._threshold)
-        # print('EXC THRESH', output)
+                
 
         # TODO: aDBS decision making based on input signal
         # if stim should be switched on
-        if True:
+        if input_value == 1:
+            print(f'\n...AO_STIM switched ON based on {input_value}')
             self.no_engine.AO_DefaultStimulation(
                 StimFreqRight=130,
                 StimAmpRight_mA=0.5,
@@ -59,19 +58,23 @@ class AO_stim(Node):
                 StimAmpLeft_mA=0.5,
                 Duration_Sec=10.0,
             )
+            # set for output plotting
+            stim_output = 1
         
         # if stim should be switched off
-        if True:
+        elif input_value == 0:
+            print(f'\n...AO_STIM switched OFF based on {input_value}')
             self.no_engine.AO_DefaultStopStimulation()
+            # set for output plotting
+            stim_output = 0
 
         # sets as pandas DataFrame
         self.o.data = DataFrame(
-            data=[[input_value, output]],
-            columns=['IN (biomarker)',
-                     'OUT (aDBS trigger)'],
+            data=[[input_value, stim_output]],
+            columns=['STIM-input',
+                     'STIM-OUTPUT'],
             index=self.i.data.index
         )
-        # print(self.o.data)
     
 
     def close(self):
