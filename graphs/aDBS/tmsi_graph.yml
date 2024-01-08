@@ -43,8 +43,7 @@ graphs:
     - id: tmsi_sampler
       module: nodes.TMSi.tmsi_sampler
       class: Tmsisampler
-      params:
-        _QUEUE_SIZE: 100000
+
       
     # SIGNAL PROCESSING NODES
     - id: Welch_tmsi

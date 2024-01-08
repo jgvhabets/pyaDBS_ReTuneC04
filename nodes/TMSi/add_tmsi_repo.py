@@ -6,7 +6,7 @@ from numpy import logical_or
 
 def add_tmsi_repo():
         
-    tmsi_repo_name = 'tmsi-python-interface-main'
+    tmsi_repo_name = 'tmsi-python-interface'
     main_repo_name = 'pyaDBS_ReTuneC04'
     dir = getcwd()
     

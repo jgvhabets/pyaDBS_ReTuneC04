@@ -1,0 +1,11 @@
+{
+    "rec": {
+        "tmsi": {
+            "queue_size": 0,
+            "min_sample_size_sec": 0.1,
+            "use_lsl": false,
+            "recording_channels": ["X"],
+            "sampling_rate_divider": 4
+        }
+    }
+}
