@@ -29,6 +29,11 @@ class AO_stim(Node):
     def __init__(
         self, macNO = 'F4:5E:AB:6B:6D:A1',
         AO_connection: str = 'matlab',
+        STIM_DURATION: int = 3,
+        STIM_AMP_LEFT: float = 1.5,
+        STIM_FREQ_LEFT: int = 130,
+        STIM_AMP_RIGHT: float = 1.5,
+        STIM_FREQ_RIGHT: int = 130,
     ):
         # connect to AO
         self.no_engine = connect_AO(AO_connection=AO_connection,
@@ -41,22 +46,26 @@ class AO_stim(Node):
         except:
             closed = self.no_engine.AO_CloseConnection()
         
+        self.STIM_DURATION = STIM_DURATION
+        self.STIM_AMP_LEFT = STIM_AMP_LEFT
+        self.STIM_FREQ_LEFT = STIM_FREQ_LEFT
+        self.STIM_AMP_RIGHT = STIM_AMP_RIGHT
+        self.STIM_FREQ_RIGHT = STIM_FREQ_RIGHT
+        
     
     def update(self):
         # is executed every time its activated by timeflux graph
         input_value =  self.i.data.values[0, 0]
                 
-
-        # TODO: aDBS decision making based on input signal
         # if stim should be switched on
         if input_value == 1:
             print(f'\n...AO_STIM switched ON based on {input_value}')
             self.no_engine.AO_DefaultStimulation(
-                StimFreqRight=130,
-                StimAmpRight_mA=0.5,
-                StimFreqLeft=23,
-                StimAmpLeft_mA=0.5,
-                Duration_Sec=10.0,
+                StimFreqRight=self.STIM_FREQ_RIGHT,
+                StimAmpRight_mA=self.STIM_AMP_RIGHT,
+                StimFreqLeft=self.STIM_FREQ_LEFT,
+                StimAmpLeft_mA=self.STIM_AMP_LEFT,
+                Duration_Sec=self.STIM_DURATION,
             )
             # set for output plotting
             stim_output = 1
