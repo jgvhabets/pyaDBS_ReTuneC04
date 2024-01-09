@@ -30,9 +30,9 @@ class AO_stim(Node):
         self, macNO = 'F4:5E:AB:6B:6D:A1',
         AO_connection: str = 'matlab',
         STIM_DURATION: float = 3.0,
-        STIM_AMP_LEFT: float = 1.5,
+        STIM_AMP_LEFT: float = 2.5,
         STIM_FREQ_LEFT: int = 130,
-        STIM_AMP_RIGHT: float = 1.5,
+        STIM_AMP_RIGHT: float = 2.5,
         STIM_FREQ_RIGHT: int = 130,
     ):
         # connect to AO

@@ -57,6 +57,8 @@ class Compareinput(Node):
             # define ACC-threshold over 5 seconds of rest
             if self._threshold == 'ACC_to_set':
                 print('START SETTING THRESHOLD ACC')
+                setattr(self, '_threshold', 0.5)
+                print('SETT THRESHOLD 0.5 acccc')
                 self.baseline_arr = self.i.data.values[:, 0]  # possibly select input data by column name
                 setattr(self, '_threshold', 'ACC_setting')
                 print('...defining ACC threshold')
