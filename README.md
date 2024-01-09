@@ -21,6 +21,8 @@ timeflux, py-newronika interface, and py-TMSi interface.
   - `pip install pyserial`
   - `pip install PySide2`
   - `pip install pyqtgraph`
+  - `pip install pyxdf`
+  - `pip install EDFlib`
   - Download or clone <a href="https://gitlab.com/tmsi/tmsi-python-interface">TMSi Python Interface from GitLab</a>
     in `REPO\packages\`
 

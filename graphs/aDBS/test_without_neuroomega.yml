@@ -1,0 +1,76 @@
+# timeflux example using LSL as central data hub without connected neuroomega
+# run as: timeflux -d -e TIMEFLUX_HOOK_PRE=aDBS_init graphs/aDBS/test_without_neuroomega.yml
+# view at: http://localhost:8000/monitor/
+
+graphs:
+
+  # data broker graph
+  - id: Broker
+    nodes:
+    - id: broker
+      module: timeflux.nodes.zmq
+      class: Broker
+  
+  # Signal processing graph: Fetches samples and computes biomarkers
+  - id: SignalProcessing
+  # NODES ------------------------------
+    nodes:
+    # Input node: LSL module fetching samples from an LSL outlet which in turn receives data from the SAGA device
+    - id: LSL-SAGA
+      module: timeflux.nodes.lsl
+      class: Receive
+      params:
+        prop: name
+        value: SAGA
+        clocksync: True
+    # Signal processing node: Compute biomarker
+    - id: Welch
+      module: timeflux_dsp.nodes.spectral
+      class: Welch
+      params:
+        rate: 1024  # use config Node to read e.g. the tmsi sampling rate (therefore the TMSi sampler node needs to write out sampling rate by default)
+        nperseg: 500
+    # Publisher nodes: Relay data from input node and signal processing node to broker
+    - id: Pub_LSL-SAGA
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: SAGA
+    - id: Pub_Welch
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: Welch
+    # EDGES ------------------------------   
+    edges: 
+      - source: LSL-SAGA 
+        target: Pub_LSL-SAGA
+      - source: LSL-SAGA
+        target: Welch
+      - source: Welch
+        target: Pub_Welch      
+    rate: 4  # Run this graph x times per second
+
+    # Monitor graph: Receives data from broker and visualizes it
+  - id: Monitor
+    nodes:
+    # NODES ------------------------------
+    # Subscriber node: Relays data from broker to UI node
+    - id: Sub
+      module: timeflux_ui.nodes.zmq
+      class: Sub
+      params:
+        topics: 
+        - SAGA
+        - Welch
+    # UI node: Receives data from subscribers and plots them
+    - id: UI
+      module: timeflux_ui.nodes.ui
+      class: UI
+    # EDGES ------------------------------   
+    edges:
+      - source: Sub:SAGA
+        target: UI:SAGA
+      - source: Sub:Welch
+        target: UI:Welch
+    rate: 2
