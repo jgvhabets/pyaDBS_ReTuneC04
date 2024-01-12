@@ -23,54 +23,88 @@ graphs:
         prop: name
         value: SAGA
         clocksync: True
+    # Window node: Implements a sliding window over the input data
+    - id: SlideWindow
+      module: timeflux.nodes.window
+      class: Slide
+      params:
+        length: 1
+        step: 0.1
     # Signal processing node: Compute biomarker
-    - id: Welch
-      module: timeflux_dsp.nodes.spectral
-      class: Welch
+    - id: Mean
+      module: nodes.analysis.mean
+      class: Mean
+    # Output node: LSL node sending data to LSL stream
+    - id: LSL-Output
+      module: timeflux.nodes.lsl
+      class: Send
       params:
-        rate: 1024  # use config Node to read e.g. the tmsi sampling rate (therefore the TMSi sampler node needs to write out sampling rate by default)
-        nperseg: 500
-    # Publisher nodes: Relay data from input node and signal processing node to broker
-    - id: Pub_LSL-SAGA
-      module: timeflux.nodes.zmq
-      class: Pub
-      params:
-        topic: SAGA
-    - id: Pub_Welch
-      module: timeflux.nodes.zmq
-      class: Pub
-      params:
-        topic: Welch
+        name: Mean
     # EDGES ------------------------------   
     edges: 
-      - source: LSL-SAGA 
-        target: Pub_LSL-SAGA
       - source: LSL-SAGA
-        target: Welch
-      - source: Welch
-        target: Pub_Welch      
-    rate: 4  # Run this graph x times per second
+        target: SlideWindow
+      # - source: SlideWindow
+      #   target: Mean
+      - source: LSL-SAGA
+        target: Mean
+      - source: Mean
+        target: LSL-Output
+    rate: 0  # Run this graph x times per second
 
-    # Monitor graph: Receives data from broker and visualizes it
+  # Monitor graph: Receives data from broker and visualizes it
   - id: Monitor
     nodes:
     # NODES ------------------------------
-    # Subscriber node: Relays data from broker to UI node
-    - id: Sub
-      module: timeflux_ui.nodes.zmq
-      class: Sub
+    # Input nodes: Receive data from LSL stream
+    - id: LSL-SAGA
+      module: timeflux.nodes.lsl
+      class: Receive
       params:
-        topics: 
-        - SAGA
-        - Welch
+        prop: name
+        value: SAGA
+        clocksync: True
+        max_samples: 10000
+    - id: LSL-Mean
+      module: timeflux.nodes.lsl
+      class: Receive
+      params:
+        prop: name
+        value: Mean
+        clocksync: True
+        max_samples: 10000
     # UI node: Receives data from subscribers and plots them
     - id: UI
       module: timeflux_ui.nodes.ui
       class: UI
     # EDGES ------------------------------   
     edges:
-      - source: Sub:SAGA
+      - source: LSL-SAGA
         target: UI:SAGA
-      - source: Sub:Welch
-        target: UI:Welch
-    rate: 2
+      - source: LSL-Mean
+        target: UI:Mean
+    rate: 0
+
+  # Recorder graph: Receives data from LSL and saves it
+  - id: Recorder
+    nodes:
+    # NODES ------------------------------
+    # Reciever nodes: Receive data from LSL outlets
+    - id: LSL-SAGA
+      module: timeflux.nodes.lsl
+      class: Receive
+      params:
+        prop: name
+        value: SAGA
+        clocksync: True
+        max_samples: 10000
+    # Recorder node: Saves data to file
+    - id: Recorder
+      module: timeflux.nodes.hdf5
+      class: Save
+    # EDGES ------------------------------   
+    edges:
+      - source: LSL-SAGA
+        target: Recorder:SAGA
+    # Update file every second
+    rate: 1
