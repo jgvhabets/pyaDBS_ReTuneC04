@@ -1,0 +1,118 @@
+# timeflux example using LSL as central data hub without connected neuroomega
+# run as: timeflux -d -e TIMEFLUX_HOOK_PRE=aDBS_init graphs/aDBS/test_without_neuroomega.yml
+# view at: http://localhost:8000/monitor/
+
+graphs:
+
+  # dummy lsl stream graph
+  - id: DummyStream
+    nodes:
+    - id: stream
+      module: nodes.dummy.dummy_lsl
+      class: DummyLslStream
+    rate: 100
+  
+  # data broker graph
+  - id: Broker
+    nodes:
+    - id: broker
+      module: timeflux.nodes.zmq
+      class: Broker
+  
+  # Signal processing graph: Fetches samples and computes biomarkers
+  - id: SignalProcessing
+  # NODES ------------------------------
+    nodes:
+    # Input node: LSL module fetching samples from an LSL outlet which in turn receives data from the SAGA device
+    - id: LSL-SAGA
+      module: timeflux.nodes.lsl
+      class: Receive
+      params:
+        prop: name
+        value: dummy
+        clocksync: True
+    # Window node: Implements a sliding window over the input data
+    - id: SlideWindow
+      module: timeflux.nodes.window
+      class: Slide
+      params:
+        length: 1
+        step: 0.1
+    # Signal processing node: Compute biomarker
+    - id: Mean
+      module: nodes.analysis.mean
+      class: Mean
+    # Output node: LSL node sending data to LSL stream
+    - id: LSL-Output
+      module: timeflux.nodes.lsl
+      class: Send
+      params:
+        name: Mean
+    # EDGES ------------------------------   
+    edges: 
+      - source: LSL-SAGA
+        target: SlideWindow
+      - source: SlideWindow
+        target: Mean
+      # - source: LSL-SAGA
+      #   target: Mean
+      - source: Mean
+        target: LSL-Output
+    rate: 0  # Run this graph x times per second
+
+  # Monitor graph: Receives data from broker and visualizes it
+  - id: Monitor
+    nodes:
+    # NODES ------------------------------
+    # Input nodes: Receive data from LSL stream
+    - id: LSL-SAGA
+      module: timeflux.nodes.lsl
+      class: Receive
+      params:
+        prop: name
+        value: dummy
+        clocksync: True
+        max_samples: 10000
+    - id: LSL-Mean
+      module: timeflux.nodes.lsl
+      class: Receive
+      params:
+        prop: name
+        value: Mean
+        clocksync: True
+        max_samples: 10000
+    # UI node: Receives data from subscribers and plots them
+    - id: UI
+      module: timeflux_ui.nodes.ui
+      class: UI
+    # EDGES ------------------------------   
+    edges:
+      - source: LSL-SAGA
+        target: UI:SAGA
+      - source: LSL-Mean
+        target: UI:Mean
+    rate: 0
+
+  # Recorder graph: Receives data from LSL and saves it
+  - id: Recorder
+    nodes:
+    # NODES ------------------------------
+    # Reciever nodes: Receive data from LSL outlets
+    - id: LSL-SAGA
+      module: timeflux.nodes.lsl
+      class: Receive
+      params:
+        prop: name
+        value: dummy
+        clocksync: True
+        max_samples: 10000
+    # Recorder node: Saves data to file
+    - id: Recorder
+      module: timeflux.nodes.hdf5
+      class: Save
+    # EDGES ------------------------------   
+    edges:
+      - source: LSL-SAGA
+        target: Recorder:SAGA
+    # Update file every second
+    rate: 1
