@@ -19,6 +19,7 @@ import queue, json, time
 from nodes.TMSi.add_tmsi_repo import add_tmsi_repo
 add_tmsi_repo()
 import nodes.TMSi.tmsi_utils as tmsi_utils
+import utils.utils as utils
 
 # tmsi repo
 from timeflux.core.node import Node
@@ -26,9 +27,6 @@ from TMSiSDK import tmsi_device, sample_data_server
 from TMSiSDK.device import DeviceInterfaceType, DeviceState, ChannelType
 from TMSiFileFormats.file_writer import FileWriter, FileFormat
 
-# load configuration 
-with open('config.json', 'r') as file:
-    cfg = json.load(file)
 
 class Tmsisampler(Node):
     """
@@ -36,7 +34,7 @@ class Tmsisampler(Node):
     """
     def __init__(self):
 
-        self.cfg = cfg
+        self.cfg = utils.get_config_settings()
         self.counter = 0
 
         # try:
@@ -229,6 +227,10 @@ class Tmsisampler(Node):
                 print('\t...Connection to SAGA closed...')
 
 if __name__ == '__main__':
+    """
+    run on WIN, from cd REPO: python -m nodes.TMSi.tmsi_sampler
+    """
+    
     # execute
     print('START MAIN CMD-EXECUTE FUNCTION')
     Tmsisampler()

@@ -18,6 +18,7 @@ from nodes.AO.AO_get_connection import (
     connect_AO,
     apply_and_stop_test_stim
 )
+import utils.utils as utils
 
 class AO_stim(Node):
     """
@@ -34,17 +35,27 @@ class AO_stim(Node):
         STIM_FREQ_LEFT: int = 130,
         STIM_AMP_RIGHT: float = 2.5,
         STIM_FREQ_RIGHT: int = 130,
+        NO_CONNECTED: bool = False,
     ):
+        # default start in false
+        self.NO_CONNECTED = NO_CONNECTED
+        
+        # get configuration settings
+        self.cfg = utils.get_config_settings()
+
         # connect to AO
-        self.no_engine = connect_AO(AO_connection=AO_connection,
-                                    AO_MAC=macNO)
+        if self.cfg['CONNECT_NEUROOMEGA']:
+            self.no_engine = connect_AO(AO_connection=AO_connection,
+                                        AO_MAC=macNO)
 
-        # test stim start and stop
-        apply_and_stop_test_stim(self.no_engine)
+            # test stim start and stop
+            apply_and_stop_test_stim(self.no_engine)
 
-        # except:
-        #     print('\n### AO TEST STIM FAILED, NO closed...')
-        #     closed = self.no_engine.AO_CloseConnection()
+            self.NO_CONNECTED = True
+
+        else:
+            print('\n### Neuro-Omega not connected (according to configs.json)')
+
         
         self.STIM_DURATION = STIM_DURATION
         self.STIM_AMP_LEFT = STIM_AMP_LEFT
@@ -64,7 +75,7 @@ class AO_stim(Node):
             print(f'AO STIM input: {STIM_INPUT}')
                     
             # if stim should be switched on
-            if STIM_INPUT == 1:
+            if STIM_INPUT == 1 and self.NO_CONNECTED:
                 print(f'\n...AO_STIM switched ON based on {STIM_INPUT}')
                 self.no_engine.AO_DefaultStimulation(
                     self.STIM_FREQ_RIGHT,
@@ -77,11 +88,14 @@ class AO_stim(Node):
                 stim_output = 1
             
             # if stim should be switched off
-            elif STIM_INPUT == 0:
+            elif STIM_INPUT == 0 and self.NO_CONNECTED:
                 print(f'\n...AO_STIM switched OFF based on {STIM_INPUT}')
                 _ = self.no_engine.AO_DefaultStopStimulation()
                 # set for output plotting
                 stim_output = 0
+            
+            elif not self.NO_CONNECTED:
+                stim_output = STIM_INPUT
 
             # sets as pandas DataFrame
             self.o.data = DataFrame(

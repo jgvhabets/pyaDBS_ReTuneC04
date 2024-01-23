@@ -7,5 +7,6 @@
             "recording_channels": ["ACC_L_X"],
             "sampling_rate_divider": 4
         }
-    }
+    },
+    "CONNECT_NEUROOMEGA": false
 }
