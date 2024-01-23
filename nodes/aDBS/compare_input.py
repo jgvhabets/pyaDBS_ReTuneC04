@@ -47,7 +47,7 @@ class Compareinput(Node):
         
         # temporary solution for None type input
         if not isinstance(self.i.data, DataFrame):
-            print('no input data received ("i.data" is not DataFrame)')
+            print(f'no input data received ("i.data" is not DataFrame, but {type(self.i.data)})')
             self.set_default_empty_output()
 
         

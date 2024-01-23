@@ -5,7 +5,10 @@
             "min_sample_size_sec": 0.1,
             "use_lsl": false,
             "recording_channels": ["ACC_L_X"],
-            "sampling_rate_divider": 4
+            "sampling_rate_divider": 4,
+            "FETCH_FULL_Q": false,
+            "MIN_BLOCK_SIZE_msec": 250,
+            "USE_SINGLE_STARTTIME": true
         }
     },
     "CONNECT_NEUROOMEGA": false

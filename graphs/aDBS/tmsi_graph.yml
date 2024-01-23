@@ -196,7 +196,7 @@ graphs:
       # - source: Bands_ecog:beta
       #   target: Pub_ecog_bands
       
-    rate: 4  # Run this graph x times per second
+    rate: 0  # Run this graph x times per second
 
   # defines streams to be collected by nodes
   - id: Subscriber
