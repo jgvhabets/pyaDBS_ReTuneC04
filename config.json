@@ -9,4 +9,8 @@
         }
     },
     "CONNECT_NEUROOMEGA": false
+    },
+    "stim": {
+        "detection_blank_period": 1
+    }
 }
