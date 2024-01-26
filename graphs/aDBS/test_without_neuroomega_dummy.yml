@@ -60,6 +60,37 @@ graphs:
         target: LSL-Output
     rate: 0  # Run this graph x times per second
 
+  # Stimulation graph: Receives biomarker and controls stimulation
+  - id: Stimulation
+  # NODES ------------------------------
+    nodes:
+    # Input node: LSL module fetching samples from an LSL outlet which in turn receives data from the SignalProcessing graph
+    - id: LSL-Biomarker
+      module: timeflux.nodes.lsl
+      class: Receive
+      params:
+        prop: name
+        value: Mean
+        clocksync: True
+    # Control node: Check biomarker and adjust stimulation parameters
+    - id: SingleThreshold
+      module: nodes.stimulation.single_threshold
+      class: Single_threshold
+    # Output node: LSL node sending data to LSL stream
+    - id: LSL-Output
+      module: timeflux.nodes.lsl
+      class: Send
+      params:
+        name: StimParams
+    # EDGES ------------------------------   
+    edges: 
+      - source: LSL-Biomarker
+        target: SingleThreshold
+      - source: SingleThreshold
+        target: LSL-Output
+    rate: 0  # Run this graph x times per second
+
+
   # Monitor graph: Receives data from broker and visualizes it
   - id: Monitor
     nodes:
@@ -81,6 +112,14 @@ graphs:
         value: Mean
         clocksync: True
         max_samples: 10000
+    - id: LSL-StimParams
+      module: timeflux.nodes.lsl
+      class: Receive
+      params:
+        prop: name
+        value: StimParams
+        clocksync: True
+        max_samples: 10000
     # UI node: Receives data from subscribers and plots them
     - id: UI
       module: timeflux_ui.nodes.ui
@@ -91,7 +130,9 @@ graphs:
         target: UI:SAGA
       - source: LSL-Mean
         target: UI:Mean
-    rate: 0
+      - source: LSL-StimParams
+        target: UI:StimParams
+    rate: 10
 
   # Recorder graph: Receives data from LSL and saves it
   - id: Recorder

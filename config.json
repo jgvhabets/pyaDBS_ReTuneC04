@@ -11,9 +11,22 @@
             "USE_SINGLE_STARTTIME": true
         }
     },
-    "CONNECT_NEUROOMEGA": false
-    },
+    "CONNECT_NEUROOMEGA": false,
     "stim": {
-        "detection_blank_period": 1
+        "detection_blank_period": 15,
+        "onset_period": 5,
+        "termination_period": 5,
+        "ramp_period": 10,
+        "threshold": 0.5,
+        "stim_amp_low": 0,
+        "stim_amp_high": 2,
+        "stim_amp_param": "STIM_AMP_RIGHT",
+        "stim_params": {
+            "STIM_DURATION": 100,
+            "STIM_AMP_LEFT": 0,
+            "STIM_FREQ_LEFT": 1,
+            "STIM_AMP_RIGHT": 0,
+            "STIM_FREQ_RIGHT": 1
+        }
     }
 }
