@@ -7,12 +7,12 @@ chronic stim source: https://github.com/jlbusch/C04/blob/dev/stim_AO/stim_AO.m
 """
 # import public packages
 import time
-from pandas import DataFrame
+import warnings
+import pandas as pd
 from timeflux.core.node import Node
+from pylsl import local_clock
 
 # import custom neuroomega matlab wrapper (credits: Richard Koehler) (located in REPO/packages/neuroomega_matlab)
-import neuroomega_matlab as no
-print('imported neuroomega_matlab')
 # import repo functions
 from nodes.AO.AO_get_connection import (
     connect_AO,
@@ -30,11 +30,6 @@ class AO_stim(Node):
     def __init__(
         self, macNO = 'F4:5E:AB:6B:6D:A1',
         AO_connection: str = 'matlab',
-        STIM_DURATION: float = 3.0,
-        STIM_AMP_LEFT: float = 2.5,
-        STIM_FREQ_LEFT: int = 130,
-        STIM_AMP_RIGHT: float = 2.5,
-        STIM_FREQ_RIGHT: int = 130,
         NO_CONNECTED: bool = False,
     ):
         # default start in false
@@ -56,59 +51,55 @@ class AO_stim(Node):
         else:
             print('\n### Neuro-Omega not connected (according to configs.json)')
 
-        
-        self.STIM_DURATION = STIM_DURATION
-        self.STIM_AMP_LEFT = STIM_AMP_LEFT
-        self.STIM_FREQ_LEFT = STIM_FREQ_LEFT
-        self.STIM_AMP_RIGHT = STIM_AMP_RIGHT
-        self.STIM_FREQ_RIGHT = STIM_FREQ_RIGHT
+        # set initial stimulation parameters
+        self.stim_params = pd.DataFrame(self.cfg['stim']['stim_params'], index=[0])
         
     
     def update(self):
         # is executed every time its activated by timeflux graph
-        # temporary solution for None type input
-        if not isinstance(self.i.data, DataFrame):
-            print('None input data received in (AO_stim_matlab): no stim change')
-        
-        else:
-            STIM_INPUT =  self.i.data.values[0, 0]
-            print(f'AO STIM input: {STIM_INPUT}')
-                    
-            # if stim should be switched on
-            if STIM_INPUT == 1 and self.NO_CONNECTED:
-                print(f'\n...AO_STIM switched ON based on {STIM_INPUT}')
-                self.no_engine.AO_DefaultStimulation(
-                    self.STIM_FREQ_RIGHT,
-                    self.STIM_AMP_RIGHT,
-                    self.STIM_FREQ_LEFT,
-                    self.STIM_AMP_LEFT,
-                    self.STIM_DURATION,
-                )  # always keep this order corr to DefaultStimulation function
-                # set for output plotting
-                stim_output = 1
-            
-            # if stim should be switched off
-            elif STIM_INPUT == 0 and self.NO_CONNECTED:
-                print(f'\n...AO_STIM switched OFF based on {STIM_INPUT}')
-                _ = self.no_engine.AO_DefaultStopStimulation()
-                # set for output plotting
-                stim_output = 0
-            
-            elif not self.NO_CONNECTED:
-                stim_output = STIM_INPUT
+        # make sure we have a non-empty dataframe
+        if self.i.ready():
 
-            # sets as pandas DataFrame
-            self.o.data = DataFrame(
-                data=[[STIM_INPUT, stim_output]],
-                columns=['STIM-input',
-                        'STIM-OUTPUT'],
-                index=self.i.data.index
-            )
+            # check if new stim params are different than current stim params      
+            if self.has_new_stim_params(current_stim_params=self.stim_params, incoming_stim_params=self.i.data):
+
+                # overwrite old stim params with new stim params
+                self.stim_params = self.i.data
+
+                # if neuroomega is connected update stim parameters on neuroomega
+                if self.NO_CONNECTED:
+
+                        self.no_engine.AO_DefaultStimulation(
+                            self.stim_params['STIM_FREQ_RIGHT'],
+                            self.stim_params['STIM_AMP_RIGHT'],
+                            self.stim_params['STIM_FREQ_LEFT'],
+                            self.stim_params['STIM_AMP_LEFT'],
+                            self.stim_params['STIM_DURATION']
+                        )  # always keep this order corr to DefaultStimulation function
+            
+                elif not self.NO_CONNECTED:
+                    pass
+
+            # sets as pandas DataFrame with current timestamp
+            self.o.data = self.stim_params.set_index(pd.Index([local_clock()*1e9]))
         
 
     def close(self):
         closed = self.no_engine.AO_CloseConnection()
         print('closed NeuroOmega connection')
+
+    def has_new_stim_params(self, current_stim_params, incoming_stim_params):
+        
+        new_stim_params = False
+
+        for column in current_stim_params:
+            if column in incoming_stim_params:
+                if current_stim_params.iloc[0][column] != incoming_stim_params.iloc[0][column]:
+                    new_stim_params = True
+            else:
+                warnings.warn(f"{column} of current stim params not found in new stim params")
+
+        return new_stim_params
 
 
 

@@ -76,6 +76,10 @@ graphs:
     - id: SingleThreshold
       module: nodes.stimulation.single_threshold
       class: Single_threshold
+    # Stimulator node: Controls stim params on neuroomega
+    - id: Stimulator
+      module: nodes.AO.AO_stim_matlab
+      class: AO_stim
     # Output node: LSL node sending data to LSL stream
     - id: LSL-Output
       module: timeflux.nodes.lsl
@@ -87,6 +91,8 @@ graphs:
       - source: LSL-Biomarker
         target: SingleThreshold
       - source: SingleThreshold
+        target: Stimulator
+      - source: Stimulator
         target: LSL-Output
     rate: 0  # Run this graph x times per second
 
