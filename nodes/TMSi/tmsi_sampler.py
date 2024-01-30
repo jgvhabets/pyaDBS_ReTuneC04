@@ -181,7 +181,8 @@ class Tmsisampler(Node):
             # rows=sampled_arr[:, :-2], # only include data channels (i.e., not counter)
             samples,
             names=[channel.name for channel in self.dev.channels[:-2]],
-            timestamps=time_array)
+            timestamps=time_array,
+            meta={"rate": self.sfreq})
 
 
             # consider TMSi filewriter
