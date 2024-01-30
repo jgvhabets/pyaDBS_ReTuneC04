@@ -1,0 +1,124 @@
+# timeflux example using LSL as central data hub without connected neuroomega
+# run as: timeflux -d -e TIMEFLUX_HOOK_PRE=aDBS_init graphs/aDBS/test_without_neuroomega.yml
+# view at: http://localhost:8000/monitor/
+
+graphs:
+
+  # data broker graph
+  - id: Broker
+    nodes:
+    - id: broker
+      module: timeflux.nodes.zmq
+      class: Broker
+  
+  # Signal processing graph: Fetches samples and computes biomarkers
+  - id: SignalProcessing
+    # NODES ------------------------------
+    nodes:
+    # Input node: Fetches samples from tmsi device
+    - id: TmsiSampler
+      module: nodes.TMSi.tmsi_sampler
+      class: Tmsisampler
+    # Window node: Implements a sliding window over the input data
+    - id: SlideWindow
+      module: timeflux.nodes.window
+      class: Slide
+      params:
+        length: 1
+        step: 0.1
+    # Signal processing node: Compute biomarker
+    - id: Mean
+      module: nodes.analysis.mean
+      class: Mean
+    # Publisher nodes: Sending data to broker
+    - id: Pub_TmsiSampler
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: TmsiSampler
+    - id: Pub_Mean
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: Mean
+    # EDGES ------------------------------   
+    edges: 
+      - source: TmsiSampler
+        target: SlideWindow
+      - source: SlideWindow
+        target: Mean
+      - source: TmsiSampler
+        target: Pub_TmsiSampler
+      - source: Mean
+        target: Pub_Mean
+    rate: 0  # Run this graph x times per second
+
+  # Stimulation graph: Receives biomarker and controls stimulation
+  - id: Stimulation
+  # NODES ------------------------------
+    nodes:
+    # Subscriber node: Fetching samples the broker which in turn receives data from the SignalProcessing graph
+    - id: Sub_Mean
+      module: timeflux.nodes.zmq
+      class: Sub
+      params:
+        topics: Mean
+    # Control node: Check biomarker and adjust stimulation parameters
+    - id: SingleThreshold
+      module: nodes.stimulation.single_threshold
+      class: Single_threshold
+    # Stimulator node: Controls stim params on neuroomega
+    - id: Stimulator
+      module: nodes.AO.AO_stim_matlab
+      class: AO_stim
+    # Publisher nodes: Sending data to broker
+    - id: Pub_Stimulator
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: Stimulator
+    # EDGES ------------------------------   
+    edges: 
+      - source: Sub_Mean
+        target: SingleThreshold
+      - source: SingleThreshold
+        target: Stimulator
+      - source: Stimulator
+        target: Pub_Stimulator
+    rate: 0  # Run this graph x times per second
+
+  # Monitor graph: Receives data from broker and visualizes it
+  - id: Monitor
+    nodes:
+    # NODES ------------------------------
+    # Subscriber nodes: Receive data from Broker
+    - id: Sub_TmsiSampler
+      module: timeflux.nodes.zmq
+      class: Sub
+      params:
+        topics: TmsiSampler
+    - id: Sub_Mean
+      module: timeflux.nodes.zmq
+      class: Sub
+      params:
+        topics: Mean
+    - id: Sub_Stimulator
+      module: timeflux.nodes.zmq
+      class: Sub
+      params:
+        topics: Stimulator
+    # UI node: Receives data from subscribers and plots them
+    - id: UI
+      module: timeflux_ui.nodes.ui
+      class: UI
+    # EDGES ------------------------------   
+    edges:
+      - source: Sub_TmsiSampler
+        target: UI:TmsiSampler
+      - source: Sub_Mean
+        target: UI:Mean
+      - source: Sub_Stimulator
+        target: UI:Stimulator
+    rate: 0
+
+  
