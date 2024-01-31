@@ -27,6 +27,9 @@ from TMSiSDK import tmsi_device, sample_data_server
 from TMSiSDK.device import DeviceInterfaceType, DeviceState, ChannelType
 from TMSiFileFormats.file_writer import FileWriter, FileFormat
 
+from pylsl import StreamInfo, StreamInlet, StreamOutlet, resolve_byprop
+
+
 
 class Tmsisampler(Node):
     """
@@ -119,24 +122,40 @@ class Tmsisampler(Node):
         # if self.tmsi_settings['USE_SINGLE_STARTTIME']:
         #     self.TIME_ZERO = datetime.now(tz=timezone.utc) # time at start TMSi recording
 
-        # open direct LSL-stream
-        if self.cfg['rec']['tmsi']['use_lsl']:
+        # open direct LSL-stream via tmsi packages
+        if self.tmsi_settings['use_lsl']:
             # Initialise the lsl-stream
             self.stream = FileWriter(FileFormat.lsl, "SAGA")
             # Pass the device information to the LSL stream.
             self.stream.open(self.dev)
 
+
+        # open LSL-stream via pylsl for saving of all TMSi
+        if self.tmsi_settings['save_via_lsl']:
+            # Initialise the lsl-stream for raw data
+            tmsiRaw_streamInfo = StreamInfo(name="rawTMSi",
+                                            type="EEG",
+                                            channel_count=len(self.channels) + 1,
+                                            nominal_srate=self.sfreq,)
+            self.rawTMSi_outlet = StreamOutlet(tmsiRaw_streamInfo)
+
+            # Initialise the lsl-stream for raw data
+            markers_streamInfo = StreamInfo(name="rawTMSi_markers",
+                                            type="Markers",
+                                            channel_count=1,    # length is always 1, therefore always list
+                                            channel_format="string")
+            self.marker_outlet = StreamOutlet(markers_streamInfo)
+
+
+        
         
     def update(self):
 
-        # try:  # comment out for debugging
-
-            # dt = datetime.now(tz=timezone.utc) # current time
-            # print(f'at start of update block: {dt}') 
+        # comment out for debugging
+        # try:
 
         # Get samples from SAGA
-        sampled_arr = self.get_samples(FETCH_UNTIL_Q_EMPTY=self.tmsi_settings["FETCH_FULL_Q"],
-                                        MIN_BLOCK_SIZE=self.MIN_TMSI_samples,)
+        sampled_arr = self.get_samples()
                 
         # reshape samples that are given in uni-dimensional form
         sampled_arr = np.reshape(sampled_arr,
@@ -145,33 +164,9 @@ class Tmsisampler(Node):
                                  order='C')
         
         # Compute timestamps for recently fetched samples
-        if self.tmsi_settings['USE_SINGLE_STARTTIME']:
-            if not self.first_block_taken:
-                self.TIME_ZERO = datetime.now(tz=timezone.utc) # current time
-                time_array = np.flip(np.array(
-                    [self.TIME_ZERO - (
-                        np.arange(0, sampled_arr.shape[0]) * self.txdelta
-                    )]
-                ).ravel())
-                self.first_block_taken = True
-            else:
-                # create timestamp list with timedelta of sampling freq, for correct shape
-                time_array = np.array(
-                    [self.TIME_ZERO + (
-                        np.arange(sampled_arr.shape[0]) * self.txdelta
-                    )]
-                ).ravel()
-                # update startin time for next block, next timestamp not included in current output block
-                self.TIME_ZERO += self.txdelta * sampled_arr.shape[0]
-
-        else:
-            dt = datetime.now(tz=timezone.utc) # current time
-            # print(f'after getting samples: {dt}') 
-            txdelta = timedelta(seconds=1 / self.dev.config.sample_rate) # time interval (i.e., 1/fs)
-            time_array = np.flip(np.array([dt - (np.arange(sampled_arr.shape[0]/len(self.dev.channels)) * txdelta)]).ravel()) # create timestamp list with current timestamp as the latest timepoint
+        time_array = self.get_stamps_for_samples(n_new_samples=sampled_arr.shape[0])
         
-        dt = datetime.now(tz=timezone.utc) # current time
-        print(f'CHECK TIME: end of block: {time_array[-1]}, current time: {dt}')
+        # prepare output dataframe
         samples = DataFrame(data=sampled_arr[:, :-2],
                             columns=[ch.name for ch in self.dev.channels[:-2]],
                             index=time_array) 
@@ -184,17 +179,25 @@ class Tmsisampler(Node):
             timestamps=time_array,
             meta={"rate": self.sfreq})
 
+        if self.tmsi_settings["save_via_lsl"]:
+            # send sampled array plus used timestamps (in array), for saving LSL clock is used
+            self.rawTMSi_outlet.push_chunk(
+                x=np.concatenate([samples.values, time_array], axis=1,),
+                pushthrough=True,
+            )
+            # send current time of sending and size of send block
+            self.marker_outlet.push_sample(
+                x=[datetime.now(tz=timezone.utc), samples.shape]
+            )
 
-            # consider TMSi filewriter
-            # # Initialise a file-writer class (Poly5-format) and state its file path
-            # file_writer = FileWriter(FileFormat.poly5, join(measurements_dir,"Example_envelope_plot.poly5"))
+
+        
+        # consider TMSi filewriter
+        # # Initialise a file-writer class (Poly5-format) and state its file path
+        # file_writer = FileWriter(FileFormat.poly5, join(measurements_dir,"Example_envelope_plot.poly5"))
 
 
-            # self.count += 1
-
-            # if self.count > 500:
-            #     print('count reached max')
-            #     self.close()
+            
 
         # except:  # comment out for debugging
         #     self.close()
@@ -213,6 +216,9 @@ class Tmsisampler(Node):
                 is false, if active, then window is pushed when
                 this amount of samples (per variable) is present
         """
+        FETCH_UNTIL_Q_EMPTY=self.tmsi_settings["FETCH_FULL_Q"]
+        MIN_BLOCK_SIZE=self.MIN_TMSI_samples
+
         # start with empty array
         sampled_arr = np.array([])
 
@@ -256,6 +262,47 @@ class Tmsisampler(Node):
             print(f'size of queue after samples were fetched: {self.queue.qsize()}')
 
         return sampled_arr
+
+
+    def get_stamps_for_samples(self, n_new_samples):
+        """
+        Arguments:
+            - n_new_samples: numer of rows of new sampled
+                array
+        
+        Returns:
+            - array containing timestamps based on last
+                timestamp where previous block stopped
+        """
+        if self.tmsi_settings['USE_SINGLE_STARTTIME']:
+            if not self.first_block_taken:
+                self.TIME_ZERO = datetime.now(tz=timezone.utc) # current time
+                time_array = np.flip(np.array(
+                    [self.TIME_ZERO - (
+                        np.arange(0, n_new_samples) * self.txdelta
+                    )]
+                ).ravel())
+                self.first_block_taken = True
+            else:
+                # create timestamp list with timedelta of sampling freq, for correct shape
+                time_array = np.array(
+                    [self.TIME_ZERO + (
+                        np.arange(n_new_samples) * self.txdelta
+                    )]
+                ).ravel()
+                # update startin time for next block, next timestamp not included in current output block
+                self.TIME_ZERO += self.txdelta * n_new_samples
+
+        else:
+            dt = datetime.now(tz=timezone.utc) # current time
+            # print(f'after getting samples: {dt}') 
+            txdelta = timedelta(seconds=1 / self.dev.config.sample_rate) # time interval (i.e., 1/fs)
+            # create timestamp list with current timestamp as the latest timepoint
+            time_array = np.flip(np.array(
+                [dt - (np.arange(n_new_samples/len(self.dev.channels)) * txdelta)]
+            ).ravel())
+        
+        return time_array
 
 
     def close(self):

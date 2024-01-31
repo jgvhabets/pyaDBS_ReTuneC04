@@ -1,0 +1,259 @@
+# timeflux example dual-input with ZeroMQ (Publishing and Subscribing)
+# PM running instructions: 
+#   run from: cd C:\Users\habetsj\Research\projects\aDBS_C04\code\pyaDBS_ReTuneC04
+# or Labor: cd C:\CODE\tasks\pyaDBS_ReTuneC04
+#   cmd: timeflux -d graphs/aDBS/tmsi_graph.yml
+# view at: http://localhost:8000/monitor/
+# TODO: solve FFT problem with x.real() with imported value in wrong float type
+# TODO: apply LSL in dummy workflow
+
+graphs:
+
+  # The publish/subscribe broker graph
+  - id: Broker
+    nodes:
+    # Allow communication between graphs
+    - id: broker
+      module: timeflux.nodes.zmq
+      class: Broker
+  
+
+  # The main processing graph
+  - id: TMSiPublisher
+    nodes:
+    # GET DATA: Receive ephys signal from neural sampler
+    - id: tmsi_sampler
+      module: nodes.TMSi.tmsi_sampler
+      class: Tmsisampler
+
+    # SIGNAL PROCESSING NODES
+    - id: Welch_tmsi
+      module: timeflux_dsp.nodes.spectral
+      class: Welch
+      params:
+        rate: 1024  # use config Node to read e.g. the tmsi sampling rate (therefore the TMSi sampler node needs to write out sampling rate by default)
+        nperseg: 500
+    - id: Bands_tmsi
+      module: timeflux_dsp.nodes.spectral
+      class: Bands
+      params:
+        relative: True
+    # - id: Welch_stn
+    #   module: timeflux_dsp.nodes.spectral
+    #   class: Welch
+    #   params:
+    #     rate: 500  # use config Node to read e.g. the tmsi sampling rate (therefore the TMSi sampler node needs to write out sampling rate by default)
+    #     nperseg: 256
+    # - id: Welch_ecog
+    #   module: timeflux_dsp.nodes.spectral
+    #   class: Welch
+    #   params:
+    #     rate: 2048
+    #     nperseg: 256
+    # - id: Bands_stn
+    #   module: timeflux_dsp.nodes.spectral
+    #   class: Bands
+    #   params:
+    #     relative: True
+    # - id: Bands_ecog
+    #   module: timeflux_dsp.nodes.spectral
+    #   class: Bands
+    #   params:
+    #     relative: True
+    # - id: Coherence
+    #   module: nodes.analysis.coherence
+    #   class: Coherence
+    #   params:
+    #     metric: 'abs_icoh'  # squared_coh, icoh, coh, abs_icoh
+    #     fs: 2048
+    #     nperseg: 512
+    #     f_band_min: 14
+    #     f_band_max: 20
+    
+    # aDBS DECISION MAKING NODES
+    - id: compare_stn
+      module: nodes.aDBS.compare_input
+      class: Compareinput
+      params:
+        input_signal: stn_beta
+    - id: compare_acc
+      module: nodes.aDBS.compare_input
+      class: Compareinput
+      params:
+        input_signal: acc_movement
+
+    # Stimulation Nodes
+    - id: AO_Stim
+      module: nodes.AO.AO_stim_matlab
+      class: AO_stim
+    
+    # INTER GRAPH COMM. PUBLISHING NODES
+    - id: Pub_raw_TMSi
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: raw_tmsi
+    - id: Pub_acc_output
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: acc_output
+    - id: Pub_Stim
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: AO_Stim_output
+    
+    
+    # - id: Pub_bands_TMSi
+    #   module: timeflux.nodes.zmq
+    #   class: Pub
+    #   params:
+    #     topic: bands_tmsi
+
+    # - id: Pub_raw_stn
+    #   module: timeflux.nodes.zmq
+    #   class: Pub
+    #   params:
+    #     topic: raw_stn
+    # - id: Pub_raw_ecog
+    #   module: timeflux.nodes.zmq
+    #   class: Pub
+    #   params:
+    #     topic: raw_ecog
+    # - id: Pub_stn_bands
+    #   module: timeflux.nodes.zmq
+    #   class: Pub
+    #   params:
+    #     topic: bands_stn
+    # - id: Pub_ecog_bands
+    #   module: timeflux.nodes.zmq
+    #   class: Pub
+    #   params:
+    #     topic: bands_ecog
+    # - id: Pub_stn_outputcompare_acc
+    #   module: timeflux.nodes.zmq
+    #   class: Pub
+    #   params:
+    #     topic: stn_output
+    # - id: Pub_coh
+    #   module: timeflux.nodes.zmq
+    #   class: Pub
+    #   params:
+    #     topic: beta_coh  # coherence in and out
+    
+    edges:  # Connect nodes WITHIN graph
+      
+      # Communicate imported Data
+      - source: tmsi_sampler
+        target: Pub_raw_TMSi
+      - source: tmsi_sampler
+        target: compare_acc
+      - source: compare_acc
+        target: AO_Stim
+      - source: compare_acc
+        target: Pub_acc_output
+      - source: AO_Stim
+        target: Pub_Stim
+
+      # previous code used for first run power/coh calculation
+      # - source: tmsi_sampler:X_L
+      #   target: Welch_tmsi
+      # - source: Welch_tmsi
+      #   target: Bands_tmsi
+      # - source: Bands_tmsi
+      #   target: Pub_bands_TMSi
+
+      # - source: ecog_import
+      #   target: Pub_raw_ecog
+      # Process import signals for beta-power
+      # - source: tmsi_sampler
+      #   target: Welch_stn
+      # - source: Welch_stn
+      #   target: Bands_stn
+      # # - source: ecog_import
+      # #   target: Welch_ecog
+      # # - source: Welch_ecog
+      # #   target: Bands_ecog
+      # # use STN-beta-power as aDBS input
+      # - source: Bands_stn:beta
+      #   target: compare_stn
+      # - source: compare_stn
+      #   target: Pub_stn_output
+      # use beta-STN-ECoG-Coherence as aDBS input
+      # - source: stn_import
+      #   target: Coherence:sig1  # Node Class automatically converts this into i_sig1
+      # - source: ecog_import
+      #   target: Coherence:sig2
+      # - source: Coherence
+      #   target: compare_coh
+      # - source: compare_coh
+      #   target: Pub_coh
+      
+
+      # - source: Bands_stn:beta  # TODO: CHECK Bands class for band selection func
+      #   target: Pub_stn_bands
+      # - source: Bands_ecog:beta
+      #   target: Pub_ecog_bands
+      
+    rate: 0  # Run this graph x times per second
+
+  # defines streams to be collected by nodes
+  - id: Subscriber
+    nodes:
+    - id: sub_raw
+      module: timeflux.nodes.zmq
+      class: Sub
+      params:
+        topics: raw_tmsi   #[raw_stn, raw_ecog]  bands_tmsi
+    - id: sub_stim_input
+      module: timeflux.nodes.zmq
+      class: Sub
+      params:
+        topics: acc_output  # [bands_stn, bands_ecog]
+    - id: sub_stim_output
+      module: timeflux.nodes.zmq
+      class: Sub
+      params:
+        topics: AO_Stim_output
+
+
+
+
+    # - id: sub_bands
+    #   module: timeflux.nodes.zmq
+    #   class: Sub
+    #   params:
+    #     topics: bands_tmsi
+
+    # - id: sub_output
+    #   module: timeflux.nodes.zmq
+    #   class: Sub
+    #   params:
+    #     topics: stn_output
+    # - id: sub_coh
+    #   module: timeflux.nodes.zmq
+    #   class: Sub
+    #   params:
+    #     topics: beta_coh
+
+    
+    - id: monitor
+      module: timeflux_ui.nodes.ui
+      class: UI
+    edges:
+      # plot raw tmsi
+      - source: sub_raw:raw_tmsi
+        target: monitor:raw_tmsi  # monitor target is not defined before
+      # plot bands of tmsi
+      # - source: sub_bands:bands_tmsi
+      #   target: monitor:bands_tmsi
+      # plot input signal to AO-stim
+      - source: sub_stim_input:acc_output
+        target: monitor:acc_output
+      - source: sub_stim_output:stim_output
+        target: monitor:stim_output
+      - source: sub_stim_output:AO_Stim_output
+        target: monitor:AO_Stim_output
+
+    rate: 0
