@@ -27,7 +27,7 @@ from TMSiSDK import tmsi_device, sample_data_server
 from TMSiSDK.device import DeviceInterfaceType, DeviceState, ChannelType
 from TMSiFileFormats.file_writer import FileWriter, FileFormat
 
-from pylsl import StreamInfo, StreamInlet, StreamOutlet, resolve_byprop
+from pylsl import StreamInfo, StreamOutlet
 
 
 
@@ -35,34 +35,31 @@ class Tmsisampler(Node):
     """
     Class to connect and sample TMSi SAGA data.
     """
-    def __init__(self):
-        # load configurations
-        self.cfg = utils.get_config_settings()
+    def __init__(self, config_filename='config.json',):
+        ### load configurations
+        self.cfg = utils.get_config_settings(config_filename)  # use given filename in graph .yml or default config.json
+           
         self.tmsi_settings = self.cfg["rec"]["tmsi"]
 
-        self.counter = 0
-
-        # Initialise the TMSi-SDK first before starting using it
+        ### Initialise and Connect TMSi
         print('\t...trying to initialize TMSi-SDK...')
-        tmsi_device.initialize()
+        tmsi_device.initialize()  # init TMSi-SDK before using it
         print('\t...TMSi-SDK initialized...')
 
-        print('\t...Discovering devices...')
         # Execute a device discovery. This returns a list of device-objects for every discovered device.
+        print('\t...Discovering devices...')
         discoveryList = tmsi_device.discover(tmsi_device.DeviceType.saga, 
-                                                DeviceInterfaceType.docked, 
-                                                DeviceInterfaceType.usb)
+                                             DeviceInterfaceType.docked, 
+                                             DeviceInterfaceType.usb)
 
         # Get the handle to the first discovered device.
-        if (len(discoveryList) > 0):
-            self.dev = discoveryList[0]
+        if (len(discoveryList) > 0): self.dev = discoveryList[0]
         print(f'\t...Found {discoveryList[0]}')
 
         # Check if connection to SAGA is not already open
         if self.dev.status.state == DeviceState.disconnected:
-            # Open a connection to the SAGA
             print('\t...opening connection to SAGA...')
-            self.dev.open()
+            self.dev.open()  # Open a connection to the SAGA
             print('\t...Connection to SAGA established...')
         else:
             # Connection already open
@@ -85,7 +82,7 @@ class Tmsisampler(Node):
 
         # update changes
         self.dev.config.channels = self.channels
-        # self.update_sensors()
+        # self.update_sensors()  # redundant in new TMSi-Python version
 
         # set sampling rate
         self.dev.config.set_sample_rate(ChannelType.all_types, self.tmsi_settings['sampling_rate_divider'])
@@ -103,7 +100,7 @@ class Tmsisampler(Node):
             if (type != ChannelType.unknown) and (type != ChannelType.all_types):
                 print(f'{str(type)} = {self.dev.config.get_sample_rate(type)} Hz')
 
-        ### SETUP TMSI SAMPLES EXTRACTION
+        ### SETUP TMSI SAMPLES EXTRACTION ###
                 
         # create queue and link it to SAGA device
         self.queue = queue.Queue(maxsize=self.cfg['rec']['tmsi']['queue_size'])  # if maxsize=0, queue is indefinite
@@ -138,6 +135,9 @@ class Tmsisampler(Node):
                                             channel_count=len(self.channels) + 1,
                                             nominal_srate=self.sfreq,)
             self.rawTMSi_outlet = StreamOutlet(tmsiRaw_streamInfo)
+            self.temp_raw_storing = []
+            # define number of samples of blocks to be saved in LSL
+            self.n_samples_save = self.tmsi_settings["sample_secs_save_lsl"] * self.sfreq
 
             # Initialise the lsl-stream for raw data
             markers_streamInfo = StreamInfo(name="rawTMSi_markers",
@@ -145,7 +145,8 @@ class Tmsisampler(Node):
                                             channel_count=1,    # length is always 1, therefore always list
                                             channel_format="string")
             self.marker_outlet = StreamOutlet(markers_streamInfo)
-
+            # as first push, send selected channel names for saving
+            self.marker_outlet.push_sample(self.ch_names)  # include time
 
         
         
@@ -154,41 +155,74 @@ class Tmsisampler(Node):
         # comment out for debugging
         # try:
 
-        # Get samples from SAGA
+        # Get samples from SAGA, reshape internally
         sampled_arr = self.get_samples()
-                
-        # reshape samples that are given in uni-dimensional form
-        sampled_arr = np.reshape(sampled_arr,
-                                 (len(sampled_arr) // len(self.dev.channels),
-                                 len(self.dev.channels)),
-                                 order='C')
         
         # Compute timestamps for recently fetched samples
         time_array = self.get_stamps_for_samples(n_new_samples=sampled_arr.shape[0])
-        
+
+        ### SETTING TIMEFLUX OUTPUT (as DataFrame)
+
         # prepare output dataframe
-        samples = DataFrame(data=sampled_arr[:, :-2],
+        samples = DataFrame(data=sampled_arr[:, :-2],  # only include data channels (i.e., not counter)
                             columns=[ch.name for ch in self.dev.channels[:-2]],
-                            index=time_array) 
+                            index=time_array)
+        
+        if self.cfg["LSL_workflow"]:
+            # set all active channels as timeflux output 
+            self.o.set(
+                samples,
+                names=[channel.name for channel in self.dev.channels[:-2]],
+                timestamps=time_array,
+                meta={"rate": self.sfreq}
+            )
+        
+        else:
+            # only set channels selected for aDBS as timeflux output
+            self.o.set(
+                samples[:, self.aDBS_channel_bool],
+                names=self.aDBS_ch_names,
+                timestamps=time_array,
+                meta={"rate": self.sfreq}
+            )
 
-        # prepare timeflux output (as DataFrame)
-        self.o.set(
-            # rows=sampled_arr[:, :-2], # only include data channels (i.e., not counter)
-            samples,
-            names=[channel.name for channel in self.dev.channels[:-2]],
-            timestamps=time_array,
-            meta={"rate": self.sfreq})
+        ### SAVING OF RAW DATA
 
+        # merge timestamps and samples to push for storing
         if self.tmsi_settings["save_via_lsl"]:
-            # send sampled array plus used timestamps (in array), for saving LSL clock is used
-            self.rawTMSi_outlet.push_chunk(
-                x=np.concatenate([samples.values, time_array], axis=1,),
-                pushthrough=True,
+            temp_store_arr = np.concatenate(
+                [samples.values, time_array], axis=1,
             )
-            # send current time of sending and size of send block
+
+            # send Markers every raw output: 
+            # send start time and shape of block and current time
             self.marker_outlet.push_sample(
-                x=[datetime.now(tz=timezone.utc), samples.shape]
+                x=['RAW_PUSHED (t0, shape, current_t)',
+                   time_array[0],
+                   samples.shape,
+                   datetime.now(tz=timezone.utc)]
             )
+
+            # send sampled array plus used timestamps (in array)
+            # for saving LSL clock is used
+            
+            # add to existing or new storing block
+            if len(self.temp_raw_storing) > 0:
+                self.temp_raw_storing = np.concatenate(
+                    [self.temp_raw_storing, temp_store_arr],
+                    axis=0
+                )
+            else:  # create new storing block
+                self.temp_raw_storing = temp_store_arr
+
+            # send if present stored block is long enough
+            if self.temp_raw_storing.shape[0] > self.n_samples_save:
+                self.rawTMSi_outlet.push_chunk(
+                    x=self.temp_raw_storing,
+                    pushthrough=True,
+                )
+                self.temp_raw_storing = []  # clean up
+            
 
 
         
@@ -204,7 +238,8 @@ class Tmsisampler(Node):
 
 
     def get_samples(self, FETCH_UNTIL_Q_EMPTY: bool = True,
-                    MIN_BLOCK_SIZE: int = 0,):
+                    MIN_BLOCK_SIZE: int = 0,
+                    RESHAPE_ARRAY: bool = True,):
         """
         Fetches samples from SAGA by receiving samples from
         the queue for a specified duration (min_sample_size_sec)
@@ -260,6 +295,13 @@ class Tmsisampler(Node):
             print('number of samples fetched: '
                   f'{len(sampled_arr)/ len(self.dev.channels)}')
             print(f'size of queue after samples were fetched: {self.queue.qsize()}')
+
+        # reshape samples that are given in uni-dimensional form
+        if RESHAPE_ARRAY:
+            sampled_arr = np.reshape(sampled_arr,
+                                     (len(sampled_arr) // len(self.dev.channels),
+                                     len(self.dev.channels)),
+                                     order='C',)
 
         return sampled_arr
 

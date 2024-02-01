@@ -10,11 +10,12 @@
             "FETCH_FULL_Q": false,
             "MIN_BLOCK_SIZE_msec": 250,
             "USE_SINGLE_STARTTIME": true,
-            "recording_channels": ["ACC_L_X"]
+            "recording_channel_types": ["ACC", "LFP", "ECOG", "EMG"],
+            "aDBS_channels": ["ACC_L_X"]
         }
     },
     "CONNECT_NEUROOMEGA": false,
-    "LSL_workflow": true,
+    "LSL_workflow": false,
     "stim": {
         "detection_blank_period": 15,
         "onset_period": 5,
@@ -31,5 +32,9 @@
             "STIM_AMP_RIGHT": 0,
             "STIM_FREQ_RIGHT": 1
         }
+    },
+    "biomarker": {
+        "type": "power",
+        "freq_range": [65, 85]
     }
 }

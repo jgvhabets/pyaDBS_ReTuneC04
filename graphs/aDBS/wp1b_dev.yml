@@ -1,15 +1,18 @@
-# timeflux example dual-input with ZeroMQ (Publishing and Subscribing)
+# timeflux workflow using ZeroMQ (Publishing and Subscribing)
+
 # PM running instructions: 
 #   run from: cd C:\Users\habetsj\Research\projects\aDBS_C04\code\pyaDBS_ReTuneC04
 # or Labor: cd C:\CODE\tasks\pyaDBS_ReTuneC04
 #   cmd: timeflux -d graphs/aDBS/tmsi_graph.yml
 # view at: http://localhost:8000/monitor/
+
+# old notes:
 # TODO: solve FFT problem with x.real() with imported value in wrong float type
 # TODO: apply LSL in dummy workflow
 
 graphs:
 
-  # The publish/subscribe broker graph
+  ### Standard Publish/subscribe broker graph
   - id: Broker
     nodes:
     # Allow communication between graphs
@@ -18,69 +21,34 @@ graphs:
       class: Broker
   
 
-  # The main processing graph
+  ### Main processing graph
   - id: TMSiPublisher
     nodes:
+
     # GET DATA: Receive ephys signal from neural sampler
     - id: tmsi_sampler
       module: nodes.TMSi.tmsi_sampler
       class: Tmsisampler
+      params:
+        config_filename: "config_wp1b.json"
 
     # SIGNAL PROCESSING NODES
-    - id: Welch_tmsi
-      module: timeflux_dsp.nodes.spectral
-      class: Welch
+    - id: biomarker
+      module: nodes.analysis.biomarker
+      class: Biomarker
       params:
-        rate: 1024  # use config Node to read e.g. the tmsi sampling rate (therefore the TMSi sampler node needs to write out sampling rate by default)
-        nperseg: 500
-    - id: Bands_tmsi
-      module: timeflux_dsp.nodes.spectral
-      class: Bands
-      params:
-        relative: True
-    # - id: Welch_stn
-    #   module: timeflux_dsp.nodes.spectral
-    #   class: Welch
-    #   params:
-    #     rate: 500  # use config Node to read e.g. the tmsi sampling rate (therefore the TMSi sampler node needs to write out sampling rate by default)
-    #     nperseg: 256
-    # - id: Welch_ecog
-    #   module: timeflux_dsp.nodes.spectral
-    #   class: Welch
-    #   params:
-    #     rate: 2048
-    #     nperseg: 256
-    # - id: Bands_stn
-    #   module: timeflux_dsp.nodes.spectral
-    #   class: Bands
-    #   params:
-    #     relative: True
-    # - id: Bands_ecog
-    #   module: timeflux_dsp.nodes.spectral
-    #   class: Bands
-    #   params:
-    #     relative: True
-    # - id: Coherence
-    #   module: nodes.analysis.coherence
-    #   class: Coherence
-    #   params:
-    #     metric: 'abs_icoh'  # squared_coh, icoh, coh, abs_icoh
-    #     fs: 2048
-    #     nperseg: 512
-    #     f_band_min: 14
-    #     f_band_max: 20
-    
+        config_filename: "config_wp1b.json"
+
     # aDBS DECISION MAKING NODES
-    - id: compare_stn
+    - id: compare_biomarker
       module: nodes.aDBS.compare_input
       class: Compareinput
-      params:
-        input_signal: stn_beta
-    - id: compare_acc
-      module: nodes.aDBS.compare_input
-      class: Compareinput
-      params:
-        input_signal: acc_movement
+      
+    # - id: compare_acc
+    #   module: nodes.aDBS.compare_input
+    #   class: Compareinput
+    #   params:
+    #     input_signal: acc_movement
 
     # Stimulation Nodes
     - id: AO_Stim
@@ -88,7 +56,7 @@ graphs:
       class: AO_stim
     
     # INTER GRAPH COMM. PUBLISHING NODES
-    - id: Pub_raw_TMSi
+    - id: Pub_raw_sig
       module: timeflux.nodes.zmq
       class: Pub
       params:
@@ -146,13 +114,18 @@ graphs:
       
       # Communicate imported Data
       - source: tmsi_sampler
-        target: Pub_raw_TMSi
+        target: Pub_raw_sig
       - source: tmsi_sampler
-        target: compare_acc
-      - source: compare_acc
-        target: AO_Stim
-      - source: compare_acc
-        target: Pub_acc_output
+        target: biomarker
+      - source: biomarker
+        target: compare_biomarker
+
+      # - source: tmsi_sampler
+      #   target: compare_acc
+      # - source: compare_acc
+      #   target: AO_Stim
+      # - source: compare_acc
+      #   target: Pub_acc_output
       - source: AO_Stim
         target: Pub_Stim
 

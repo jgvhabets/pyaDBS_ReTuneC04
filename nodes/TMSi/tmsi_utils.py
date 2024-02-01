@@ -33,15 +33,54 @@ def correct_ACC_channelnames(channels, sides=['R', 'L']):
     return channels
 
 
-def activate_channel_selection(self):
+def channel_selection(self):
     """
-    CREATE DOCSTRING
+    Has two selection functions: 1) Select channels
+    to save based on channel/data types, 2) select
+    channels to use for aDBS biomarker creation
+
+    Arguments:
+        - based on 'recording_channel_types' and 
+            'aDBS_channels' in tmsi-settings, config.json.
+            channeltypes in list have to be the type-
+            codes in the TMSI channel naming
+    
+    Returns:
+        - updates TMSi channels in tmsi-sampler class (self)
+        - add a boolean array to tmsi-sampler class (self)
+            that select the aDBS biomarkers
     """
-    for channel in self.channels:
-        if channel.name in self.cfg['rec']['tmsi']['recording_channels']:
-            channel.enabled = True
-        else:
-            channel.enabled = False
+    self.ch_names = []
+    # use LSL as main intergraph broker
+    if self.cfg["LSL_workflow"]:
+        for channel in self.channels:
+            if channel.name in self.tmsi_settings['recording_channels']:
+                channel.enabled = True
+                self.ch_names.append(channel.name)
+            else:
+                channel.enabled = False
+    
+    # use timeflux broker system intergraph (zeromq)
+    else:
+        print('include channel types for saving: '
+              f'{self.tmsi_settings["recording_channel_types"]}')
+        
+        for channel in self.channels:
+            # true if one of the codes is found in channel name
+            if any([ch_code in channel.name
+                    for ch_code in self.tmsi_settings['recording_channel_types']]):
+                channel.enabled = True
+                self.ch_names.append(channel.name)
+
+            else:
+                channel.enabled = False
+        
+        self.aDBS_channel_bool = [c in self.tmsi_settings["aDBS_channels"]
+                                  for c in self.ch_names]
+        self.aDBS_ch_names = self.ch_names[self.aDBS_channel_bool]
+        print(f'selected aDBS channel-names: {self.aDBS_ch_names}')
+        
+        assert sum(self.aDBS_channel_bool) > 0, 'no aDBS channels selected'
                     
 
 def sig_vector_magn(sig, return_mean = True):
