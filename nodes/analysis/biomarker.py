@@ -16,15 +16,15 @@ from timeflux.core.node import Node
 import utils.utils as utils
 
 
-class Biomaker(Node):
+class Biomarker(Node):
     def __init__(
         self,
         config_filename='config.json',
         sfreq=None,
         seg_len_sec=.25,
     ):
-        self._sfreq = sfreq
-        self._seg_len_sec = seg_len_sec
+        self.sfreq = sfreq
+        self.seg_len_sec = seg_len_sec
 
         # load configurations
         self.marker_cfg = utils.get_config_settings(config_filename)['biomarker']
@@ -52,21 +52,21 @@ class Biomaker(Node):
         # extract unknown sample freq and replace
         if not self.sfreq:
             self.sfreq = self.i.meta["rate"]
-            self._nperseg = self._seg_len_sec * self.sfreq
+            self.nperseg = self.seg_len_sec * self.sfreq
         
         if self.metric == 'power':
             # take mean in case of multiple channels
             if self.i.data.shape[1] > 1:
                 sig = np.mean(self.i.data, axis=1)
             else:
-                sig = self.i.data.values
-
+                sig = self.i.data.values.ravel()
+                        
             assert type(sig[0]) == np.float64, (
                 "raw signals have to np.float64"
             )
 
             # spectral decomposition
-            freqs, values = welch(sig, fs=self.sfreq, nperseg=self._nperseg,)
+            freqs, values = welch(sig, fs=self.sfreq, nperseg=self.nperseg,)
         
         # select frequencies
         sel_values, sel_freqs = select_bandwidths(
@@ -74,7 +74,7 @@ class Biomaker(Node):
             f_min=self.f_range[0], f_max=self.f_range[1]
         )
         value = np.mean(sel_values)
-        freq = int(np.mean(sel_freqs))
+        # freq = int(np.mean(sel_freqs))
 
         # sets as pandas DataFrame
         self.o.data = pd.DataFrame(
@@ -82,4 +82,3 @@ class Biomaker(Node):
             columns=[f'{self.metric}: {self.f_range[0]}-{self.f_range[1]} Hz'],
             index=[datetime.now(tz=timezone.utc)]
         )
-        # print(self.o.data)

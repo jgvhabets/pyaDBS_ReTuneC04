@@ -3,7 +3,7 @@
 # PM running instructions: 
 #   run from: cd C:\Users\habetsj\Research\projects\aDBS_C04\code\pyaDBS_ReTuneC04
 # or Labor: cd C:\CODE\tasks\pyaDBS_ReTuneC04
-#   cmd: timeflux -d graphs/aDBS/tmsi_graph.yml
+#   cmd: timeflux -d graphs/aDBS/wp1b_dev.yml
 # view at: http://localhost:8000/monitor/
 
 # old notes:
@@ -43,6 +43,8 @@ graphs:
     - id: compare_biomarker
       module: nodes.aDBS.compare_input
       class: Compareinput
+      params:
+        config_filename: "config_wp1b.json"
       
     # - id: compare_acc
     #   module: nodes.aDBS.compare_input

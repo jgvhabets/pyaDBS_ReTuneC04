@@ -3,7 +3,7 @@ Util functions for TMSi usage in timeflux
 """
 
 import numpy as np
-
+from itertools import compress
 
 def correct_ACC_channelnames(channels, sides=['R', 'L']):
     """
@@ -74,11 +74,12 @@ def channel_selection(self):
 
             else:
                 channel.enabled = False
-        
+        # print(f'ch_names: {self.ch_names}')
         self.aDBS_channel_bool = [c in self.tmsi_settings["aDBS_channels"]
                                   for c in self.ch_names]
-        self.aDBS_ch_names = self.ch_names[self.aDBS_channel_bool]
-        print(f'selected aDBS channel-names: {self.aDBS_ch_names}')
+        # print(f'adbs bool: {self.aDBS_channel_bool}')
+        self.aDBS_ch_names = list(compress(self.ch_names, self.aDBS_channel_bool))
+        # print(f'selected aDBS channel-names: {self.aDBS_ch_names}')
         
         assert sum(self.aDBS_channel_bool) > 0, 'no aDBS channels selected'
                     

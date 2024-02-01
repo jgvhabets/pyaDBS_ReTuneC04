@@ -78,7 +78,7 @@ class Tmsisampler(Node):
         self.channels = tmsi_utils.correct_ACC_channelnames(self.channels)
 
         # activate channels given as recording_channels in the cfg
-        tmsi_utils.activate_channel_selection(self)
+        tmsi_utils.channel_selection(self)
 
         # update changes
         self.dev.config.channels = self.channels
@@ -180,7 +180,7 @@ class Tmsisampler(Node):
         else:
             # only set channels selected for aDBS as timeflux output
             self.o.set(
-                samples[:, self.aDBS_channel_bool],
+                samples.values[:, self.aDBS_channel_bool],
                 names=self.aDBS_ch_names,
                 timestamps=time_array,
                 meta={"rate": self.sfreq}
@@ -290,11 +290,11 @@ class Tmsisampler(Node):
                 self.queue.task_done()  # obligatory second line to get sampled samples
                 # add new samples to previously fetched samples
                 sampled_arr = np.concatenate((sampled_arr, sampled.samples))
-                print(f'samples total length: {len(sampled_arr)}')
+                # print(f'samples total length: {len(sampled_arr)}')
                 
-            print('number of samples fetched: '
-                  f'{len(sampled_arr)/ len(self.dev.channels)}')
-            print(f'size of queue after samples were fetched: {self.queue.qsize()}')
+            # print('number of samples fetched: '
+            #       f'{len(sampled_arr)/ len(self.dev.channels)}')
+            # print(f'size of queue after samples were fetched: {self.queue.qsize()}')
 
         # reshape samples that are given in uni-dimensional form
         if RESHAPE_ARRAY:

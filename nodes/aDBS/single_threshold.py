@@ -13,10 +13,10 @@ class Single_threshold(Node):
         i (Port): Default input, expects DataFrame.
         o (Port): Default output, provides DataFrame.
     """
-    def __init__(self):
+    def __init__(self, config_filename='config.json',):
 
         # load configuration 
-        cfg = utils.get_config_settings()
+        cfg = utils.get_config_settings(config_filename)
         self.stim_cfg = cfg['stim']
         self.stim_params = cfg['stim']['stim_params']
 
@@ -25,7 +25,11 @@ class Single_threshold(Node):
         self._onset_period = self.stim_cfg['onset_period'] # minimum period above threshold to trigger ramp up
         self._termination_period = self.stim_cfg['termination_period'] # minimum period below threshold to after ramp down
         self._ramp_period = self.stim_cfg['ramp_period'] # period between change from low to high stim amp
-        self._threshold = self.stim_cfg['threshold'] # threshold that needs to be crossed for a specific onset/termination period to trigger stim ramp up/down
+        # get threshold from cfg or automated generated
+        if self.cfg["LSL_workflow"]:
+            self._threshold = self.stim_cfg['threshold'] # threshold that needs to be crossed for a specific onset/termination period to trigger stim ramp up/down
+        # else:
+        #     self._threshold = TODO # OR GIVE as META
         self._stim_amp_low = self.stim_cfg['stim_amp_low'] # lower stim amp
         self._stim_amp_high = self.stim_cfg['stim_amp_high'] # higher stim amp
         self._stim_amp_param = self.stim_cfg['stim_amp_param'] # stimulation amplitude parameter to adjust
