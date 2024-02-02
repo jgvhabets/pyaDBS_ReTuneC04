@@ -21,8 +21,9 @@ graphs:
       class: Broker
   
 
-  ### Main processing graph
-  - id: TMSiPublisher
+  ### Main Experiment graph
+  - id: MainExperiment
+    # Nodes: executing classes in exp part
     nodes:
 
     # GET DATA: Receive ephys signal from neural sampler
@@ -46,11 +47,9 @@ graphs:
       params:
         config_filename: "config_wp1b.json"
       
-    # - id: compare_acc
-    #   module: nodes.aDBS.compare_input
-    #   class: Compareinput
-    #   params:
-    #     input_signal: acc_movement
+    - id: single_threshold
+      module: nodes.aDBS.single_threshold
+      class: Single_threshold
 
     # Stimulation Nodes
     - id: AO_Stim
@@ -63,119 +62,60 @@ graphs:
       class: Pub
       params:
         topic: raw_tmsi
-    - id: Pub_acc_output
+    - id: Pub_biomarker
       module: timeflux.nodes.zmq
       class: Pub
       params:
-        topic: acc_output
-    - id: Pub_Stim
+        topic: biomarker
+    - id: Pub_comp_biomarker
       module: timeflux.nodes.zmq
       class: Pub
       params:
-        topic: AO_Stim_output
+        topic: comp_marker
+    - id: Pub_aDBS_Thresh
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: aDBS_single_thresh
+    - id: Pub_AO
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: AO_ampl
     
-    
-    # - id: Pub_bands_TMSi
-    #   module: timeflux.nodes.zmq
-    #   class: Pub
-    #   params:
-    #     topic: bands_tmsi
-
-    # - id: Pub_raw_stn
-    #   module: timeflux.nodes.zmq
-    #   class: Pub
-    #   params:
-    #     topic: raw_stn
-    # - id: Pub_raw_ecog
-    #   module: timeflux.nodes.zmq
-    #   class: Pub
-    #   params:
-    #     topic: raw_ecog
-    # - id: Pub_stn_bands
-    #   module: timeflux.nodes.zmq
-    #   class: Pub
-    #   params:
-    #     topic: bands_stn
-    # - id: Pub_ecog_bands
-    #   module: timeflux.nodes.zmq
-    #   class: Pub
-    #   params:
-    #     topic: bands_ecog
-    # - id: Pub_stn_outputcompare_acc
-    #   module: timeflux.nodes.zmq
-    #   class: Pub
-    #   params:
-    #     topic: stn_output
-    # - id: Pub_coh
-    #   module: timeflux.nodes.zmq
-    #   class: Pub
-    #   params:
-    #     topic: beta_coh  # coherence in and out
-    
-    edges:  # Connect nodes WITHIN graph
+    # Edges: communication between internal nodes within exp graph
+    edges:
       
-      # Communicate imported Data
-      - source: tmsi_sampler
-        target: Pub_raw_sig
+      # Communication for exp workflow
       - source: tmsi_sampler
         target: biomarker
       - source: biomarker
         target: compare_biomarker
+      - source: compare_biomarker
+        target: single_threshold
+      - source: single_threshold
+        target: AO_Stim
 
-      # - source: tmsi_sampler
-      #   target: compare_acc
-      # - source: compare_acc
-      #   target: AO_Stim
-      # - source: compare_acc
-      #   target: Pub_acc_output
-      - source: AO_Stim
-        target: Pub_Stim
 
-      # previous code used for first run power/coh calculation
-      # - source: tmsi_sampler:X_L
-      #   target: Welch_tmsi
-      # - source: Welch_tmsi
-      #   target: Bands_tmsi
-      # - source: Bands_tmsi
-      #   target: Pub_bands_TMSi
+      # Communication for visualization
+      - source: tmsi_sampler
+        target: Pub_raw_sig
+      - source: biomarker 
+        target: Pub_biomarker
+      - source: compare_biomarker
+        target: Pub_comp_biomarker
+      - source: single_threshold
+        target: Pub_aDBS_Thresh
+      - source: AO_Stim 
+        target: Pub_AO
+    
+    # Define update rate (times poer second)
+    rate: 0  # 0 means as fast as possible
 
-      # - source: ecog_import
-      #   target: Pub_raw_ecog
-      # Process import signals for beta-power
-      # - source: tmsi_sampler
-      #   target: Welch_stn
-      # - source: Welch_stn
-      #   target: Bands_stn
-      # # - source: ecog_import
-      # #   target: Welch_ecog
-      # # - source: Welch_ecog
-      # #   target: Bands_ecog
-      # # use STN-beta-power as aDBS input
-      # - source: Bands_stn:beta
-      #   target: compare_stn
-      # - source: compare_stn
-      #   target: Pub_stn_output
-      # use beta-STN-ECoG-Coherence as aDBS input
-      # - source: stn_import
-      #   target: Coherence:sig1  # Node Class automatically converts this into i_sig1
-      # - source: ecog_import
-      #   target: Coherence:sig2
-      # - source: Coherence
-      #   target: compare_coh
-      # - source: compare_coh
-      #   target: Pub_coh
-      
-
-      # - source: Bands_stn:beta  # TODO: CHECK Bands class for band selection func
-      #   target: Pub_stn_bands
-      # - source: Bands_ecog:beta
-      #   target: Pub_ecog_bands
-      
-    rate: 0  # Run this graph x times per second
-
-  # defines streams to be collected by nodes
-  - id: Subscriber
+  ### Visualization Graph
+  - id: Monitoring
     nodes:
+    # nodes to collect monitoring streams
     - id: sub_raw
       module: timeflux.nodes.zmq
       class: Sub
@@ -192,27 +132,7 @@ graphs:
       params:
         topics: AO_Stim_output
 
-
-
-
-    # - id: sub_bands
-    #   module: timeflux.nodes.zmq
-    #   class: Sub
-    #   params:
-    #     topics: bands_tmsi
-
-    # - id: sub_output
-    #   module: timeflux.nodes.zmq
-    #   class: Sub
-    #   params:
-    #     topics: stn_output
-    # - id: sub_coh
-    #   module: timeflux.nodes.zmq
-    #   class: Sub
-    #   params:
-    #     topics: beta_coh
-
-    
+    # nodes to visualize collected streams
     - id: monitor
       module: timeflux_ui.nodes.ui
       class: UI
