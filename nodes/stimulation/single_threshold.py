@@ -19,16 +19,25 @@ class Single_threshold(Node):
         cfg = utils.get_config_settings()
         self.stim_cfg = cfg['stim']
         self.stim_params = cfg['stim']['stim_params']
+        self.rate = self.stim_cfg['rate']
 
-        # set configurable attributes 
-        self._detection_blank_period = self.stim_cfg['detection_blank_period'] # period after ramping up/down during which incoming data does not induce state changes
-        self._onset_period = self.stim_cfg['onset_period'] # minimum period above threshold to trigger ramp up
-        self._termination_period = self.stim_cfg['termination_period'] # minimum period below threshold to after ramp down
-        self._ramp_period = self.stim_cfg['ramp_period'] # period between change from low to high stim amp
-        self._threshold = self.stim_cfg['threshold'] # threshold that needs to be crossed for a specific onset/termination period to trigger stim ramp up/down
-        self._stim_amp_low = self.stim_cfg['stim_amp_low'] # lower stim amp
-        self._stim_amp_high = self.stim_cfg['stim_amp_high'] # higher stim amp
-        self._stim_amp_param = self.stim_cfg['stim_amp_param'] # stimulation amplitude parameter to adjust
+        # set configurable attributes, convert from seconds to samples if appropriate
+        # period after ramping up/down during which incoming data does not induce state changes
+        self._detection_blank_period = utils.convert_time_samples(freq=self.rate, time=self.stim_cfg['detection_blank_period'])  
+        # minimum period above threshold to trigger ramp up
+        self._onset_period = utils.convert_time_samples(freq=self.rate, time=self.stim_cfg['onset_period'])
+        # minimum period below threshold to after ramp down
+        self._termination_period = utils.convert_time_samples(freq=self.rate, time=self.stim_cfg['termination_period']) 
+         # period between change from low to high stim amp
+        self._ramp_period = utils.convert_time_samples(freq=self.rate, time=self.stim_cfg['ramp_period'])
+        # threshold that needs to be crossed for a specific onset/termination period to trigger stim ramp up/down
+        self._threshold = self.stim_cfg['threshold']
+        # lower stim amp
+        self._stim_amp_low = self.stim_cfg['stim_amp_low'] 
+        # higher stim amp
+        self._stim_amp_high = self.stim_cfg['stim_amp_high'] 
+        # stimulation amplitude parameter to adjust
+        self._stim_amp_param = self.stim_cfg['stim_amp_param'] 
 
         # set housekeeping attributes
         self._loops_in_detection_blank = 0 # number of loops spent in detection blank

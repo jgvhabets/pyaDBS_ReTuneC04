@@ -12,6 +12,16 @@ def get_config_settings(
 
     return cfg
 
+def convert_time_samples(freq, time=None, samples=None):
+
+    # compute time if number of samples is given
+    if samples is not None:
+        time = int(samples / freq)
+        return time
+    # compute samples if time is given
+    elif time is not None:
+        samples = int(time * freq)
+        return samples
 
 def extract_data(port):
     
