@@ -32,8 +32,6 @@ class Synchronizer(Node):
                 # add current time to computed timestamp
                 datetime_index = pd.to_timedelta(port.data.index, unit="s") + self.current_time
                 getattr(self, name_out).data.index = datetime_index
-                # print(f'name {name}')
-                # print(getattr(self, name_out).data)
 
             
 

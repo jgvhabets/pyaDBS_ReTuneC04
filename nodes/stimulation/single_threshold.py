@@ -1,4 +1,3 @@
-import json, mne
 from timeflux.core.node import Node
 import pandas as pd
 from pylsl import local_clock
@@ -16,8 +15,8 @@ class Single_threshold(Node):
     def __init__(self):
 
         # load configuration 
-        cfg = utils.get_config_settings()
-        self.stim_cfg = cfg['stim']
+        self.cfg = utils.get_config_settings()
+        self.stim_cfg = self.cfg['stim']
         self.stim_params = pd.DataFrame(self.cfg['stim']['stim_params'], index=[0])
         self.rate = self.stim_cfg['rate']
 

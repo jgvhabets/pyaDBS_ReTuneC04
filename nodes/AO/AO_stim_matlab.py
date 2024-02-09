@@ -6,7 +6,6 @@ to test run alone (WIN): python -m nodes.AO.AO_stim_matlab
 chronic stim source: https://github.com/jlbusch/C04/blob/dev/stim_AO/stim_AO.m
 """
 # import public packages
-import time
 import warnings
 import pandas as pd
 from timeflux.core.node import Node
@@ -102,6 +101,7 @@ class AO_stim(Node):
         
 
     def close(self):
+        
         closed = self.no_engine.AO_CloseConnection()
         print('closed NeuroOmega connection')
 

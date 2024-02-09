@@ -7,13 +7,11 @@ Adjusted from https://gitlab.com/tmsi/tmsi-python-interface/
 to test stand alone on WIN: python -m  nodes.TMSi.tmsi_sampler
 """
 
-# %%
-
 # general
 import numpy as np
 from pandas import DataFrame
 from datetime import datetime, timedelta, timezone
-import queue, json, time
+import queue
 from pylsl import local_clock
 
 # add tmsi repo to path
@@ -27,7 +25,6 @@ from timeflux.core.node import Node
 from TMSiSDK import tmsi_device, sample_data_server
 from TMSiSDK.device import DeviceInterfaceType, DeviceState, ChannelType
 from TMSiFileFormats.file_writer import FileWriter, FileFormat
-
 
 class Tmsisampler(Node):
     """
@@ -130,13 +127,8 @@ class Tmsisampler(Node):
             # Pass the device information to the LSL stream.
             self.stream.open(self.dev)
 
-        
+
     def update(self):
-
-        # try:  # comment out for debugging
-
-            # dt = datetime.now(tz=timezone.utc) # current time
-            # print(f'at start of update block: {dt}') 
 
         # Get samples from SAGA
         sampled_arr = self.get_samples(FETCH_UNTIL_Q_EMPTY=self.tmsi_settings["FETCH_FULL_Q"],
@@ -156,20 +148,6 @@ class Tmsisampler(Node):
                                                  timestamp_received=timestamp_received)
 
         # print(f'sampler -- sent at: {local_clock()} n samples = {sampled_arr.shape[0]}, package number {self.o.data["package_numbers"].iat[0]}, package id {self.o.data["package_ids"].iat[0]}')
-            # consider TMSi filewriter
-            # # Initialise a file-writer class (Poly5-format) and state its file path
-            # file_writer = FileWriter(FileFormat.poly5, join(measurements_dir,"Example_envelope_plot.poly5"))
-
-
-            # self.count += 1
-
-            # if self.count > 500:
-            #     print('count reached max')
-            #     self.close()
-
-        # except:  # comment out for debugging
-        #     self.close()
-
 
     def get_samples(self, FETCH_UNTIL_Q_EMPTY: bool = True,
                     MIN_BLOCK_SIZE: int = 0,):
@@ -187,26 +165,16 @@ class Tmsisampler(Node):
         # start with empty array
         sampled_arr = np.array([])
 
-        # # as long as there are less samples fetched from the queue than the amount of samples available in min_sample_size_sec, continue fetching samples
-        # while (len(sampled_arr) / len(self.dev.channels)) < (self.dev.config.sample_rate * self.cfg['rec']['tmsi']['min_sample_size_sec']):           
         # if there is no data available yet in the queue, wait for a bit until there is data
-        # dt = datetime.now(tz=timezone.utc) # current time
-        # print(f'before waiting : {dt}') 
         while self.queue.qsize() == 0:
-            # print('waiting for block to fill up...')
             continue
 
         if FETCH_UNTIL_Q_EMPTY:
             # as long as there is data in the queue, fetch it
             while self.queue.qsize() > 0:
-                # dt = datetime.now(tz=timezone.utc) # current time
-                # print(f'wait complete, block there, current time: {dt}') 
                 # get available samples from queue
                 sampled = self.queue.get()
-                # print(f'size of queue after GET: {self.queue.qsize()}')
                 self.queue.task_done()  # obligatory second line to get sampled samples
-                # dt = datetime.now(tz=timezone.utc) # current time
-                # print(f'after getting samples: {dt}') 
                 # add new samples to previously fetched samples
                 sampled_arr = np.concatenate((sampled_arr, sampled.samples))
         
@@ -220,11 +188,6 @@ class Tmsisampler(Node):
                 self.queue.task_done()  # obligatory second line to get sampled samples
                 # add new samples to previously fetched samples
                 sampled_arr = np.concatenate((sampled_arr, sampled.samples))
-                print(f'samples total length: {len(sampled_arr)}')
-                
-            print('number of samples fetched: '
-                  f'{len(sampled_arr)/ len(self.dev.channels)}')
-            print(f'size of queue after samples were fetched: {self.queue.qsize()}')
 
         return sampled_arr
 
