@@ -64,6 +64,8 @@ class Single_threshold(Node):
         # Make sure we have a non-empty dataframe
         if self.i.ready():
 
+            # print(f'single_threshold -- data input at: {local_clock()}')
+
             # extract data
             data, package_id = utils.extract_data(self.i)
 
@@ -89,11 +91,14 @@ class Single_threshold(Node):
 
             # get current timestamp
             timestamp_received = local_clock()
+            # print(f'single_threshold -- timestamp_received: {timestamp_received}')
 
             # Set output 
             self.o.data, self.o.meta  = self.out.set(samples=self.stim_params,
                                                      timestamp_received=timestamp_received,
                                                      package_id=package_id)
+            
+            # print(f'single_threshold -- sent from single_threshold at: {local_clock()}, package number {self.o.data["package_numbers"].iat[0]}, package id {self.o.data["package_ids"].iat[0]}')
 
     def set_trigger_state(self, value):
 

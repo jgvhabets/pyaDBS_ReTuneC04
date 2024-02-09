@@ -140,6 +140,7 @@ class Tmsisampler(Node):
         sampled_arr = self.get_samples(FETCH_UNTIL_Q_EMPTY=self.tmsi_settings["FETCH_FULL_Q"],
                                         MIN_BLOCK_SIZE=self.MIN_TMSI_samples,)
         timestamp_received = local_clock()
+        # print(f'sampler -- timestamp_received: {timestamp_received}')
                 
         # reshape samples that are given in uni-dimensional form
         sampled_arr = np.reshape(sampled_arr,
@@ -152,7 +153,7 @@ class Tmsisampler(Node):
         self.o.data, self.o.meta  = self.out.set(samples=sampled_arr[:, :-3],
                                                  timestamp_received=timestamp_received)
 
-
+        # print(f'sampler -- sent at: {local_clock()} n samples = {sampled_arr.shape[0]}, package number {self.o.data["package_numbers"].iat[0]}, package id {self.o.data["package_ids"].iat[0]}')
             # consider TMSi filewriter
             # # Initialise a file-writer class (Poly5-format) and state its file path
             # file_writer = FileWriter(FileFormat.poly5, join(measurements_dir,"Example_envelope_plot.poly5"))

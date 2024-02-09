@@ -40,9 +40,11 @@ class Mean(Node):
 
             # get current timestamp
             timestamp_received = local_clock()
+            # print(f'mean -- timestamp_received: {timestamp_received}')
 
             # Set as output 
             self.o.data, self.o.meta  = self.out.set(samples=samples_mean,
                                                      timestamp_received=timestamp_received,
                                                      package_id=package_id)
 
+            # print(f'mean -- sent from mean at: {local_clock()}, package number {self.o.data["package_numbers"].iat[0]}, package id {self.o.data["package_ids"].iat[0]}')
