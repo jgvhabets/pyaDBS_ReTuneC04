@@ -11,6 +11,7 @@ import warnings
 import pandas as pd
 from timeflux.core.node import Node
 from pylsl import local_clock
+import numpy as np
 
 # import custom neuroomega matlab wrapper (credits: Richard Koehler) (located in REPO/packages/neuroomega_matlab)
 # import repo functions
@@ -53,18 +54,24 @@ class AO_stim(Node):
 
         # set initial stimulation parameters
         self.stim_params = pd.DataFrame(self.cfg['stim']['stim_params'], index=[0])
-        
+
+        # initialize output class
+        self.out = utils.output(rate=self.cfg['analysis']['mean']['rate'], 
+                                channels=self.stim_params.columns.tolist())        
     
     def update(self):
         # is executed every time its activated by timeflux graph
         # make sure we have a non-empty dataframe
         if self.i.ready():
 
+            # extract data
+            data, package_id = utils.extract_data(self.i)
+
             # check if new stim params are different than current stim params      
-            if self.has_new_stim_params(current_stim_params=self.stim_params, incoming_stim_params=self.i.data):
+            if self.has_new_stim_params(current_stim_params=self.stim_params, incoming_stim_params=data):
 
                 # overwrite old stim params with new stim params
-                self.stim_params = self.i.data
+                self.stim_params = data
 
                 # if neuroomega is connected update stim parameters on neuroomega
                 if self.NO_CONNECTED:
@@ -80,8 +87,13 @@ class AO_stim(Node):
                 elif not self.NO_CONNECTED:
                     pass
 
-            # sets as pandas DataFrame with current timestamp
-            self.o.data = self.stim_params.set_index(pd.Index([local_clock()*1e9]))
+            # get current timestamp
+            timestamp_received = local_clock()
+
+            # Set output 
+            self.o.data, self.o.meta  = self.out.set(samples=self.stim_params,
+                                                     timestamp_received=timestamp_received,
+                                                     package_id=package_id)
         
 
     def close(self):

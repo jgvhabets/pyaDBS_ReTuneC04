@@ -45,10 +45,18 @@ class Single_threshold(Node):
         # set derivative atttributes
         self._ramp_step_size = (self._stim_amp_high - self._stim_amp_low) / self._ramp_period
 
+        # initialize output class
+        self.out = utils.output(rate=self.cfg['analysis']['mean']['rate'], 
+                                channels=self.stim_params.columns.tolist())
+
+
     def update(self):
         
         # Make sure we have a non-empty dataframe
         if self.i.ready():
+
+            # extract data
+            data, package_id = utils.extract_data(self.i)
 
             # check most recent power value against threshold and set onset or termination trigger accordingly
             self.set_trigger_state(self.i.data.iloc[0,0])
@@ -69,8 +77,14 @@ class Single_threshold(Node):
                        
             # set current stim amp
             self.stim_params[self._stim_amp_param] = self._stim_amp
-            self.o.data = pd.DataFrame(self.stim_params, 
-                                       index=[local_clock()*1e9])
+
+            # get current timestamp
+            timestamp_received = local_clock()
+
+            # Set output 
+            self.o.data, self.o.meta  = self.out.set(samples=self.stim_params,
+                                                     timestamp_received=timestamp_received,
+                                                     package_id=package_id)
 
     def set_trigger_state(self, value):
 

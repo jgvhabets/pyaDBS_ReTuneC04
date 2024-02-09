@@ -4,13 +4,6 @@
 
 graphs:
 
-  # data broker graph
-  - id: Broker
-    nodes:
-    - id: broker
-      module: timeflux.nodes.zmq
-      class: Broker
-  
   # Signal processing graph: Fetches samples and computes biomarkers
   - id: SignalProcessing
     # NODES ------------------------------
@@ -30,17 +23,17 @@ graphs:
     - id: Mean
       module: nodes.analysis.mean
       class: Mean
-    # Publisher nodes: Sending data to broker
-    - id: Pub_TmsiSampler
-      module: timeflux.nodes.zmq
-      class: Pub
+    # Output nodes: LSL node sending data to LSL stream
+    - id: LSL_Saga
+      module: nodes.data_flow.lsl
+      class: Send
       params:
-        topic: TmsiSampler
-    - id: Pub_Mean
-      module: timeflux.nodes.zmq
-      class: Pub
+        name: Saga
+    - id: LSL_Mean
+      module: nodes.data_flow.lsl
+      class: Send
       params:
-        topic: Mean
+        name: Mean
     # EDGES ------------------------------   
     edges: 
       - source: TmsiSampler
@@ -48,21 +41,23 @@ graphs:
       - source: SlideWindow
         target: Mean
       - source: TmsiSampler
-        target: Pub_TmsiSampler
+        target: LSL_Saga
       - source: Mean
-        target: Pub_Mean
+        target: LSL_Mean
     rate: 0  # Run this graph x times per second
 
   # Stimulation graph: Receives biomarker and controls stimulation
   - id: Stimulation
   # NODES ------------------------------
     nodes:
-    # Subscriber node: Fetching samples the broker which in turn receives data from the SignalProcessing graph
-    - id: Sub_Mean
-      module: timeflux.nodes.zmq
-      class: Sub
+    # Input nodes: Receive data from LSL stream
+    - id: LSL_Mean
+      module: nodes.data_flow.lsl
+      class: Receive
       params:
-        topics: Mean
+        prop: name
+        value: Mean
+        max_samples: 1
     # Control node: Check biomarker and adjust stimulation parameters
     - id: SingleThreshold
       module: nodes.stimulation.single_threshold
@@ -71,54 +66,66 @@ graphs:
     - id: Stimulator
       module: nodes.AO.AO_stim_matlab
       class: AO_stim
-    # Publisher nodes: Sending data to broker
-    - id: Pub_Stimulator
-      module: timeflux.nodes.zmq
-      class: Pub
+     # Output nodes: LSL node sending data to LSL stream
+    - id: LSL_StimParams
+      module: nodes.data_flow.lsl
+      class: Send
       params:
-        topic: Stimulator
+        name: StimParams
     # EDGES ------------------------------   
     edges: 
-      - source: Sub_Mean
+      - source: LSL_Mean
         target: SingleThreshold
       - source: SingleThreshold
         target: Stimulator
       - source: Stimulator
-        target: Pub_Stimulator
+        target: LSL_StimParams
     rate: 0  # Run this graph x times per second
 
   # Monitor graph: Receives data from broker and visualizes it
   - id: Monitor
     nodes:
     # NODES ------------------------------
-    # Subscriber nodes: Receive data from Broker
-    - id: Sub_TmsiSampler
-      module: timeflux.nodes.zmq
-      class: Sub
+    # Input nodes: Receive data from LSL stream
+    - id: LSL_Saga
+      module: nodes.data_flow.lsl
+      class: Receive
       params:
-        topics: TmsiSampler
-    - id: Sub_Mean
-      module: timeflux.nodes.zmq
-      class: Sub
+        prop: name
+        value: Saga
+    - id: LSL_Mean
+      module: nodes.data_flow.lsl
+      class: Receive
       params:
-        topics: Mean
-    - id: Sub_Stimulator
-      module: timeflux.nodes.zmq
-      class: Sub
+        prop: name
+        value: Mean
+    - id: LSL_StimParams
+      module: nodes.data_flow.lsl
+      class: Receive
       params:
-        topics: Stimulator
+        prop: name
+        value: StimParams
     # UI node: Receives data from subscribers and plots them
+    - id: Synchronizer
+      module: nodes.data_flow.sync
+      class: Synchronizer
     - id: UI
       module: timeflux_ui.nodes.ui
       class: UI
     # EDGES ------------------------------   
     edges:
-      - source: Sub_TmsiSampler
-        target: UI:TmsiSampler
-      - source: Sub_Mean
+      - source: LSL_Saga
+        target: Synchronizer:Saga
+      - source: LSL_Mean
+        target: Synchronizer:Mean
+      - source: LSL_StimParams
+        target: Synchronizer:StimParams
+      - source: Synchronizer:Saga
+        target: UI:Saga
+      - source: Synchronizer:Mean
         target: UI:Mean
-      - source: Sub_Stimulator
-        target: UI:Stimulator
-    rate: 0
+      - source: Synchronizer:StimParams
+        target: UI:StimParams
+    rate: 30
 
   

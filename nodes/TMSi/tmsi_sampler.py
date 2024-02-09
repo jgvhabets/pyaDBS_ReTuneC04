@@ -14,6 +14,7 @@ import numpy as np
 from pandas import DataFrame
 from datetime import datetime, timedelta, timezone
 import queue, json, time
+from pylsl import local_clock
 
 # add tmsi repo to path
 from nodes.TMSi.add_tmsi_repo import add_tmsi_repo
@@ -87,8 +88,6 @@ class Tmsisampler(Node):
         # set sampling rate
         self.dev.config.set_sample_rate(ChannelType.all_types, self.tmsi_settings['sampling_rate_divider'])
         self.sfreq = self.dev.config.sample_rate
-        self.txdelta = timedelta(seconds=1 / self.sfreq)
-
 
         # display updated enabled channels and sampling rate
         print(f'Updated sampling rate: {self.sfreq} Hz')
@@ -111,6 +110,9 @@ class Tmsisampler(Node):
             self.MIN_TMSI_samples = self.sfreq / (1000 / self.tmsi_settings["MIN_BLOCK_SIZE_msec"])
         else:
             self.MIN_TMSI_samples = 0  # not used, but default value
+
+        # initialize output class
+        self.out = utils.output(self.sfreq, self.cfg['rec']['tmsi']['recording_channels'])
 
         # start sampling on tmsi
         self.dev.start_measurement()
@@ -137,52 +139,18 @@ class Tmsisampler(Node):
         # Get samples from SAGA
         sampled_arr = self.get_samples(FETCH_UNTIL_Q_EMPTY=self.tmsi_settings["FETCH_FULL_Q"],
                                         MIN_BLOCK_SIZE=self.MIN_TMSI_samples,)
+        timestamp_received = local_clock()
                 
         # reshape samples that are given in uni-dimensional form
         sampled_arr = np.reshape(sampled_arr,
                                  (len(sampled_arr) // len(self.dev.channels),
                                  len(self.dev.channels)),
                                  order='C')
-        
-        # Compute timestamps for recently fetched samples
-        if self.tmsi_settings['USE_SINGLE_STARTTIME']:
-            if not self.first_block_taken:
-                self.TIME_ZERO = datetime.now(tz=timezone.utc) # current time
-                time_array = np.flip(np.array(
-                    [self.TIME_ZERO - (
-                        np.arange(0, sampled_arr.shape[0]) * self.txdelta
-                    )]
-                ).ravel())
-                self.first_block_taken = True
-            else:
-                # create timestamp list with timedelta of sampling freq, for correct shape
-                time_array = np.array(
-                    [self.TIME_ZERO + (
-                        np.arange(sampled_arr.shape[0]) * self.txdelta
-                    )]
-                ).ravel()
-                # update startin time for next block, next timestamp not included in current output block
-                self.TIME_ZERO += self.txdelta * sampled_arr.shape[0]
-
-        else:
-            dt = datetime.now(tz=timezone.utc) # current time
-            # print(f'after getting samples: {dt}') 
-            txdelta = timedelta(seconds=1 / self.dev.config.sample_rate) # time interval (i.e., 1/fs)
-            time_array = np.flip(np.array([dt - (np.arange(sampled_arr.shape[0]/len(self.dev.channels)) * txdelta)]).ravel()) # create timestamp list with current timestamp as the latest timepoint
-        
-        dt = datetime.now(tz=timezone.utc) # current time
-        print(f'CHECK TIME: end of block: {time_array[-1]}, current time: {dt}')
-        samples = DataFrame(data=sampled_arr[:, :-2],
-                            columns=[ch.name for ch in self.dev.channels[:-2]],
-                            index=time_array) 
-
+        # print(f'sampler -- after reshape: {local_clock()}')
+       
         # prepare timeflux output (as DataFrame)
-        self.o.set(
-            # rows=sampled_arr[:, :-2], # only include data channels (i.e., not counter)
-            samples,
-            names=[channel.name for channel in self.dev.channels[:-2]],
-            timestamps=time_array,
-            meta={"rate": self.sfreq})
+        self.o.data, self.o.meta  = self.out.set(samples=sampled_arr[:, :-3],
+                                                 timestamp_received=timestamp_received)
 
 
             # consider TMSi filewriter
