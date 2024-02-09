@@ -57,7 +57,7 @@ graphs:
         max_samples: 1
     # Control node: Check biomarker and adjust stimulation parameters
     - id: SingleThreshold
-      module: nodes.stimulation.single_threshold
+      module: nodes.aDBS.single_threshold
       class: Single_threshold
     # Stimulator node: Controls stim params on neuroomega
     - id: Stimulator
