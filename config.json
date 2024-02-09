@@ -5,7 +5,7 @@
             "min_sample_size_sec": 0.1,
             "use_lsl": false,
             "recording_channels": ["X"],
-            "sampling_rate_divider": 4,
+            "sampling_rate": 1000,
             "FETCH_FULL_Q": true,
             "MIN_BLOCK_SIZE_msec": 260,
             "USE_SINGLE_STARTTIME": true

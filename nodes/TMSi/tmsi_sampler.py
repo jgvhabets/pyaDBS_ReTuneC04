@@ -86,7 +86,9 @@ class Tmsisampler(Node):
         # self.update_sensors()
 
         # set sampling rate
-        self.dev.config.set_sample_rate(ChannelType.all_types, self.tmsi_settings['sampling_rate_divider'])
+        self.dev.config.base_sample_rate = 4000
+        sampling_rate_divider = 4000 / self.tmsi_settings['sampling_rate']
+        self.dev.config.set_sample_rate(ChannelType.all_types, sampling_rate_divider)
         self.sfreq = self.dev.config.sample_rate
 
         # display updated enabled channels and sampling rate
