@@ -12,13 +12,10 @@ graphs:
     - id: TmsiSampler
       module: nodes.TMSi.tmsi_sampler
       class: Tmsisampler
-    # Window node: Implements a sliding window over the input data
-    - id: SlideWindow
-      module: timeflux.nodes.window
-      class: Slide
-      params:
-        length: 1
-        step: 0.1
+    # Epoch
+    - id: Epoch
+      module: nodes.data_flow.epoch
+      class: Epoch
     # Signal processing node: Compute biomarker
     - id: Mean
       module: nodes.analysis.mean
@@ -37,8 +34,8 @@ graphs:
     # EDGES ------------------------------   
     edges: 
       - source: TmsiSampler
-        target: SlideWindow
-      - source: SlideWindow
+        target: Epoch
+      - source: Epoch
         target: Mean
       - source: TmsiSampler
         target: LSL_Saga

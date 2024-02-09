@@ -16,6 +16,12 @@
             "rate": 20 
         }
     },
+    "data_flow": {
+        "epoch": {
+            "rate": 20,
+            "window_duration": 2
+        }
+    },
     "CONNECT_NEUROOMEGA": false,
     "stim": {
         "rate": 20,
