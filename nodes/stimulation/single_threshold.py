@@ -18,7 +18,7 @@ class Single_threshold(Node):
         # load configuration 
         cfg = utils.get_config_settings()
         self.stim_cfg = cfg['stim']
-        self.stim_params = cfg['stim']['stim_params']
+        self.stim_params = pd.DataFrame(self.cfg['stim']['stim_params'], index=[0])
         self.rate = self.stim_cfg['rate']
 
         # set configurable attributes, convert from seconds to samples if appropriate
@@ -70,7 +70,7 @@ class Single_threshold(Node):
             data, package_id = utils.extract_data(self.i)
 
             # check most recent power value against threshold and set onset or termination trigger accordingly
-            self.set_trigger_state(self.i.data.iloc[0,0])
+            self.set_trigger_state(data.iloc[0,0])
 
             # determine next actions based on current system state
             
@@ -151,7 +151,6 @@ class Single_threshold(Node):
         # -> set trigger state to trigger goal
         if getattr(self, increase) >= getattr(self, period) and getattr(self, "_stim_state") == stim_state_to_leave:
             self._trigger_state = trigger_state_goal
-            self._in_detection_blank = True      
             
     def ramp_stim(self, direction):
 
@@ -169,9 +168,10 @@ class Single_threshold(Node):
         # update loop counter
         self._loops_ramp += 1
 
-        # loop counter reached ramp period -> ramping period is over, set stim state to high or low and reset counter
+        # loop counter reached ramp period -> ramping period is over, set stim state to high or low, reset counter and activate detection blank
         if self._loops_ramp == self._ramp_period:
             self._stim_state = stim_state_goal
             self._trigger_state = 'none'
             self._loops_ramp = 0
+            self._in_detection_blank = True 
 

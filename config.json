@@ -25,9 +25,10 @@
     "CONNECT_NEUROOMEGA": false,
     "stim": {
         "rate": 20,
-        "onset_period": 5,
-        "termination_period": 5,
-        "ramp_period": 10,
+        "detection_blank_period": 5,
+        "onset_period": 3,
+        "termination_period": 3,
+        "ramp_period": 1,
         "threshold": 0.5,
         "stim_amp_low": 0,
         "stim_amp_high": 2,
