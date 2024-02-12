@@ -49,6 +49,7 @@ class Single_threshold(Node):
         self._trigger_state = 'none'
         self._in_detection_blank = True
         self._stim_amp = 0
+        self._stim_switch = 'off'
 
         # set derivative atttributes
         self._ramp_step_size = (self._stim_amp_high - self._stim_amp_low) / self._ramp_period
@@ -59,32 +60,40 @@ class Single_threshold(Node):
 
 
     def update(self):
-        
+
+        # check if stim switch had been changed via timeflux ui
+        if self.i_StimSwitch.ready(): 
+            
+            self.check_stim_switch()
+
         # Make sure we have a non-empty dataframe
-        if self.i.ready():
+        if self.i_Biomarker.ready():
 
             # print(f'single_threshold -- data input at: {local_clock()}')
 
             # extract data
-            data, package_id = utils.extract_data(self.i)
+            data, package_id = utils.extract_data(self.i_Biomarker)
 
-            # check most recent power value against threshold and set onset or termination trigger accordingly
-            self.set_trigger_state(data.iloc[0,0])
+            # only proceed when stim switch is on (i.e., start signal was sent previously via timeflux ui)
+            if self._stim_switch == 'on':
 
-            # determine next actions based on current system state
-            
-            # stim amp is low and onset period criterium is fulfilled -> ramp up stimulation
-            if self._stim_state == 'low' and self._trigger_state == 'onset':
-                self.ramp_stim('up')
-                            
-            # stim amp is high and termination period criterium is fulfilled -> ramp down stimulation
-            elif self._stim_state == 'high' and self._trigger_state == 'termination':
-                self.ramp_stim('down')
+                # check most recent power value against threshold and set onset or termination trigger accordingly
+                self.set_trigger_state(data.iloc[0,0])
 
-            # in all other conditions -> no change, just forward current stim amp and threshold
-            else:
-                pass
-                       
+                # determine next actions based on current system state
+                
+                # stim amp is low and onset period criterium is fulfilled -> ramp up stimulation
+                if self._stim_state == 'low' and self._trigger_state == 'onset':
+                    self.ramp_stim('up')
+                                
+                # stim amp is high and termination period criterium is fulfilled -> ramp down stimulation
+                elif self._stim_state == 'high' and self._trigger_state == 'termination':
+                    self.ramp_stim('down')
+
+                # in all other conditions -> no change, just forward current stim amp and threshold
+                else:
+                    pass
+                        
             # set current stim amp
             self.stim_params[self._stim_amp_param] = self._stim_amp
 
@@ -174,3 +183,14 @@ class Single_threshold(Node):
             self._loops_ramp = 0
             self._in_detection_blank = True 
 
+    def check_stim_switch(self):
+
+        if self.i_StimSwitch.data['switch'].iat[0] == 'start':
+            self._stim_switch = 'on'
+        elif self.i_StimSwitch.data['switch'].iat[0] == 'stop':
+            self._stim_switch = 'off'
+            # reset states
+            self._stim_state = 'low'
+            self._trigger_state = 'none'
+            self._in_detection_blank = True
+            self._stim_amp = 0

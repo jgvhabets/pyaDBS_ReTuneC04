@@ -49,7 +49,9 @@ class Send(Node):
         name,
         type="Signal",
         rate=0.0,
+        labels=None,
         source=None,
+        channel_format="double64",
         config_path=None,
     ):
         if not source:
@@ -57,39 +59,53 @@ class Send(Node):
         self._name = name
         self._type = type
         self._rate = rate
+        self._labels = labels
         self._source = source
+        self._channel_format = channel_format
         self._outlet = None
         if config_path:
             os.environ["LSLAPICFG"] = config_path
 
     def update(self):
         if isinstance(self.i.data, pd.core.frame.DataFrame):
-            # create StreamOutlet on the fly, i.e. as first request to push samples on the stream comes in
+            # if no StreamOutlet exists, create StreamOutlet on the fly, i.e. as first request 
+            # to push samples on the stream comes in
             if not self._outlet:
-                labels = list(self.i.data)
+                if self._labels is None:
+                    self._labels = list(self.i.data)
+                else:
+                    self._labels = [self._labels]
                 # use rate in metadata of input port as rate in StreamInfo if provided
                 if "rate" in self.i.meta:
                     self._rate = self.i.meta["rate"]
                 info = StreamInfo(
                     name=self._name,
                     type=self._type,
-                    channel_count=len(labels),
+                    channel_count=len(self._labels),
                     nominal_srate=self._rate,
-                    channel_format="double64",
+                    channel_format=self._channel_format,
                     source_id=self._source,
                 )
                 channels = info.desc().append_child("channels")
-                for label in labels:
+                for label in self._labels:
                     if not isinstance("string", type(label)):
                         label = str(label)
                     channels.append_child("channel").append_child_value("label", label)
                 self._outlet = StreamOutlet(info)
                 # after creating StreamOutlet, wait a bit before pushing data on the stream as receiving nodes need some time to acquire the stream
                 sleep(1)
-            # extract data from input port that have a datatype which is allowed by timeflux
-            values = np.ascontiguousarray(self.i.data.values)
-            # send as chunk with index of input port as timestamp (i.e., computed timestamps)
-            self._outlet.push_chunk(values, timestamp=self.i.data.index.values)
+            # preprocess samples that will be sent differently according to datatype
+            if self._channel_format == "string":
+                # extract data from input port and remove columns with None entries (events contain a second column with potential 
+                # None entries, but these can not be decoded by lsl)
+                values = self.i.data.values[:, np.all(self.i.data.values != None, axis=0)]
+                # send as chunk with index of input port as timestamp (i.e., computed timestamps)
+                self._outlet.push_chunk(values.tolist(), timestamp=self.i.data.index.values)
+            if self._channel_format == "double64":
+                # make data contiguous
+                values = np.ascontiguousarray(self.i.data.values)
+                # send as chunk with index of input port as timestamp (i.e., computed timestamps)
+                self._outlet.push_chunk(values, timestamp=self.i.data.index.values)        
 
 class Receive(Node):
 

@@ -55,6 +55,14 @@ graphs:
         prop: name
         value: Mean
         max_samples: 1
+    - id: LSL_StimSwitch
+      module: nodes.data_flow.lsl
+      class: Receive
+      params:
+        prop: name
+        value: StimSwitch
+        max_samples: 1
+        timeout: 0.01
     # Control node: Check biomarker and adjust stimulation parameters
     - id: SingleThreshold
       module: nodes.aDBS.single_threshold
@@ -71,8 +79,10 @@ graphs:
         name: StimParams
     # EDGES ------------------------------   
     edges: 
+      - source: LSL_StimSwitch
+        target: SingleThreshold:StimSwitch
       - source: LSL_Mean
-        target: SingleThreshold
+        target: SingleThreshold:Biomarker
       - source: SingleThreshold
         target: Stimulator
       - source: Stimulator
@@ -102,13 +112,22 @@ graphs:
       params:
         prop: name
         value: StimParams
-    # UI node: Receives data from subscribers and plots them
+    # Synchronizer node: Adds clock time to stream timestamps
     - id: Synchronizer
       module: nodes.data_flow.sync
       class: Synchronizer
+    # UI node: Receives data from subscribers and plots them
     - id: UI
       module: timeflux_ui.nodes.ui
       class: UI
+    # Output node: LSL node sending data to LSL stream
+    - id: LSL_StimSwitch
+      module: nodes.data_flow.lsl
+      class: Send
+      params:
+        name: StimSwitch
+        channel_format: string
+        labels: switch
     # EDGES ------------------------------   
     edges:
       - source: LSL_Saga
@@ -123,6 +142,8 @@ graphs:
         target: UI:Mean
       - source: Synchronizer:StimParams
         target: UI:StimParams
-    rate: 30
+      - source: UI:events
+        target: LSL_StimSwitch
+    rate: 5
 
   
