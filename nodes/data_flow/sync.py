@@ -24,7 +24,7 @@ class Synchronizer(Node):
             if port.ready():
                 # get timestamp if this is the first time that sync is called. add 2 seconds as ~2 seconds of data are hidden on the right in timeflux_ui
                 if self.first_call:
-                    self.current_time = datetime.now(tz=timezone.utc) + timedelta(seconds=2)
+                    self.current_time = datetime.now(tz=timezone.utc) - timedelta(seconds=2)
                     self.first_call = False
                 # prepare output port
                 name_out = "o" + suffix

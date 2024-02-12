@@ -76,8 +76,9 @@ class Send(Node):
                 else:
                     self._labels = [self._labels]
                 # use rate in metadata of input port as rate in StreamInfo if provided
-                if "rate" in self.i.meta:
-                    self._rate = self.i.meta["rate"]
+                if self.i.meta is not None:
+                    if "rate" in self.i.meta:
+                        self._rate = self.i.meta["rate"]
                 info = StreamInfo(
                     name=self._name,
                     type=self._type,
