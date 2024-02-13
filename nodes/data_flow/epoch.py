@@ -21,7 +21,7 @@ class Epoch(Node):
         self.cfg = utils.get_config_settings()
         self.recording_channels = self.cfg['rec']['tmsi']['recording_channels']
         self._win_size = utils.convert_time_samples(freq=self.cfg["rec"]["tmsi"]["sampling_rate"], time=self.cfg['data_flow']['epoch']['window_duration'])
-        self._step_size = utils.convert_time_samples(freq=self.cfg["rec"]["tmsi"]["sampling_rate"], time=1/self.cfg['data_flow']['epoch']['rate'])
+        self._step_size = utils.convert_time_samples(freq=self.cfg["rec"]["tmsi"]["sampling_rate"], time=self.cfg['data_flow']['epoch']['step_duration'])
 
         # initialize output class
         self.out = utils.output(rate=self.cfg['data_flow']['epoch']['rate'], 

@@ -18,7 +18,8 @@
     },
     "data_flow": {
         "epoch": {
-            "rate": 20,
+            "rate": 1000,
+            "step_duration": 0.05,
             "window_duration": 2
         }
     },
