@@ -17,30 +17,30 @@ graphs:
       module: nodes.data_flow.epoch
       class: Epoch
     # Signal processing node: Compute biomarker
-    - id: Mean
-      module: nodes.analysis.mean
-      class: Mean
+    - id: Power
+      module: nodes.analysis.power
+      class: Power
     # Output nodes: LSL node sending data to LSL stream
     - id: LSL_Saga
       module: nodes.data_flow.lsl
       class: Send
       params:
         name: Saga
-    - id: LSL_Mean
+    - id: LSL_Power
       module: nodes.data_flow.lsl
       class: Send
       params:
-        name: Mean
+        name: Power
     # EDGES ------------------------------   
     edges: 
       - source: TmsiSampler
         target: Epoch
       - source: Epoch
-        target: Mean
+        target: Power
       - source: TmsiSampler
         target: LSL_Saga
-      - source: Mean
-        target: LSL_Mean
+      - source: Power
+        target: LSL_Power
     rate: 0  # Run this graph x times per second
 
   # Stimulation graph: Receives biomarker and controls stimulation
@@ -48,12 +48,12 @@ graphs:
   # NODES ------------------------------
     nodes:
     # Input nodes: Receive data from LSL stream
-    - id: LSL_Mean
+    - id: LSL_Power
       module: nodes.data_flow.lsl
       class: Receive
       params:
         prop: name
-        value: Mean
+        value: Power
         max_samples: 1
     - id: LSL_StimSwitch
       module: nodes.data_flow.lsl
@@ -81,7 +81,7 @@ graphs:
     edges: 
       - source: LSL_StimSwitch
         target: SingleThreshold:StimSwitch
-      - source: LSL_Mean
+      - source: LSL_Power
         target: SingleThreshold:Biomarker
       - source: SingleThreshold
         target: Stimulator
@@ -100,12 +100,12 @@ graphs:
       params:
         prop: name
         value: Saga
-    - id: LSL_Mean
+    - id: LSL_Power
       module: nodes.data_flow.lsl
       class: Receive
       params:
         prop: name
-        value: Mean
+        value: Power
     - id: LSL_StimParams
       module: nodes.data_flow.lsl
       class: Receive
@@ -132,14 +132,14 @@ graphs:
     edges:
       - source: LSL_Saga
         target: Synchronizer:Saga
-      - source: LSL_Mean
-        target: Synchronizer:Mean
+      - source: LSL_Power
+        target: Synchronizer:Power
       - source: LSL_StimParams
         target: Synchronizer:StimParams
       - source: Synchronizer:Saga
         target: UI:Saga
-      - source: Synchronizer:Mean
-        target: UI:Mean
+      - source: Synchronizer:Power
+        target: UI:Power
       - source: Synchronizer:StimParams
         target: UI:StimParams
       - source: UI:events
