@@ -10,22 +10,15 @@ to test stand alone on WIN: python -m  nodes.TMSi.tmsi_sampler
 # general
 import numpy as np
 from pandas import DataFrame
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import queue
 from pylsl import local_clock
-
-# add tmsi repo to path
-from nodes.TMSi.add_tmsi_repo import add_tmsi_repo
-add_tmsi_repo()
 import nodes.TMSi.tmsi_utils as tmsi_utils
+tmsi_utils.add_tmsi_repo()
 import utils.utils as utils
-
-# tmsi repo
 from timeflux.core.node import Node
 from TMSiSDK import tmsi_device, sample_data_server
 from TMSiSDK.device import DeviceInterfaceType, DeviceState, ChannelType
-from TMSiFileFormats.file_writer import FileWriter, FileFormat
-
 from pylsl import StreamInfo, StreamOutlet
 
 
@@ -34,10 +27,10 @@ class Tmsisampler(Node):
     """
     Class to connect and sample TMSi SAGA data.
     """
-    def __init__(self, config_filename='config.json',):
-        ### load configurations
+    def __init__(self, config_filename='config.json'):
+        
+        ### Load configurations
         self.cfg = utils.get_config_settings(config_filename)  # use given filename in graph .yml or default config.json
-           
         self.tmsi_settings = self.cfg["rec"]["tmsi"]
 
         ### Initialise and Connect TMSi
@@ -64,6 +57,7 @@ class Tmsisampler(Node):
             # Connection already open
             print('\t...Connection to SAGA already established, will not attempt to re-open...')
 
+        ### Update TMSi configuration
         print('\t...Updating SAGA configuration...')
         # display original enabled channels and sampling rate
         print(f'Original  sampling rate: {self.dev.config.sample_rate} Hz')
@@ -72,7 +66,7 @@ class Tmsisampler(Node):
         for idx, ch in enumerate(self.dev.channels):
             print(f'channel # {idx} : "{ch.name}" in {ch.unit_name}')
 
-        # Retrieve all channels from the device and update which should be enabled
+        # Retrieve all channels from the device and correct accelerometer names
         self.channels = self.dev.config.channels
         self.channels = tmsi_utils.correct_ACC_channelnames(self.channels)
 
@@ -81,7 +75,6 @@ class Tmsisampler(Node):
 
         # update changes
         self.dev.config.channels = self.channels
-        # self.update_sensors()  # redundant in new TMSi-Python version
 
         # set sampling rate
         self.dev.config.base_sample_rate = 4000
@@ -99,7 +92,7 @@ class Tmsisampler(Node):
             if (type != ChannelType.unknown) and (type != ChannelType.all_types):
                 print(f'{str(type)} = {self.dev.config.get_sample_rate(type)} Hz')
 
-        ### SETUP TMSI SAMPLES EXTRACTION ###
+        ### Setup TMSi samples extraction
                 
         # create queue and link it to SAGA device
         self.queue = queue.Queue(maxsize=self.cfg['rec']['tmsi']['queue_size'])  # if maxsize=0, queue is indefinite
@@ -111,26 +104,21 @@ class Tmsisampler(Node):
         else:
             self.MIN_TMSI_samples = 0  # not used, but default value
 
-        # initialize output class
-        self.out = utils.output(self.sfreq, self.cfg['rec']['tmsi']['recording_channels'])
+        ### Setup timestamp generation and data flow method
+        
+        # Initialize timestamp generation method based on single wall clock time extracted on first iteration
+        if self.tmsi_settings["use_wallclock_timestamp"]:
+            self.first_block_taken = False
+            
+        # Initialize timestamp generation method based on successive additions of 1/fs. Implies using utils.output() to set timeflux output
+        else:   
 
-        # start sampling on tmsi
-        self.dev.start_measurement()
-        self.first_block_taken = False
-        # timelag circa .4 seconds  -> starttime in first block (circa .008 - .02 sec ahead)
-        # if self.tmsi_settings['USE_SINGLE_STARTTIME']:
-        #     self.TIME_ZERO = datetime.now(tz=timezone.utc) # time at start TMSi recording
-
-        # open direct LSL-stream via tmsi packages
-        if self.tmsi_settings['use_lsl']:
-            # Initialise the lsl-stream
-            self.stream = FileWriter(FileFormat.lsl, "SAGA")
-            # Pass the device information to the LSL stream.
-            self.stream.open(self.dev)
-
-
-        # open LSL-stream via pylsl for saving of all TMSi
-        if self.tmsi_settings['save_via_lsl']:
+            # initialize output classes
+            self.out_selection = utils.output(self.sfreq, self.aDBS_ch_names)
+            self.out_all = utils.output(self.sfreq, self.ch_names)
+      
+        # Open LSL-stream via pylsl for saving of all TMSi data if save_via_lsl == True
+        if self.tmsi_settings["save_via_lsl"]:
             # Initialise the lsl-stream for raw data
             tmsiRaw_streamInfo = StreamInfo(name="rawTMSi",
                                             type="EEG",
@@ -150,52 +138,61 @@ class Tmsisampler(Node):
             # as first push, send selected channel names for saving
             self.marker_outlet.push_sample(self.ch_names)  # include time
 
-        
-        
-    def update(self):
+        ### Start sampling on TMSi
+        self.dev.start_measurement()
+        # timelag circa .4 seconds  -> starttime in first block (circa .008 - .02 sec ahead)
 
-        timestamp_received = local_clock()
-        # prepare timeflux output (as DataFrame)
-        self.o.data, self.o.meta  = self.out.set(samples=sampled_arr[:, :-3],
-                                                 timestamp_received=timestamp_received)
-        # comment out for debugging
-        # try:
+    def update(self):
 
         # Get samples from SAGA, reshape internally
         sampled_arr = self.get_samples()
-        
-        # Compute timestamps for recently fetched samples
-        time_array = self.get_stamps_for_samples(n_new_samples=sampled_arr.shape[0])
 
-        ### SETTING TIMEFLUX OUTPUT (as DataFrame)
+        # Prepare output depending on use_wallclock_timestamp
 
-        # prepare output dataframe
-        samples = DataFrame(data=sampled_arr[:, :-2],  # only include data channels (i.e., not counter)
-                            columns=[ch.name for ch in self.dev.channels[:-2]],
-                            index=time_array)
+        # If use_wallclock_timestamp == true, compute timestamps with get_stamps_for_samples(). This generates timestamps based on 
+        # an initial call to datetime.now() to get the wall clock time and successive additions of 1/fs to this wall clock time for each sample 
+        # fetched from TMSi. When using this method, only channels selected for aDBS will be set as timeflux output, while the full data fetched from
+        # TMSi will be transmitted to LSL later.
+        if self.tmsi_settings["use_wallclock_timestamp"]:
         
-        if self.cfg["LSL_workflow"]:
-            # set all active channels as timeflux output 
-            self.o.set(
-                samples,
-                names=[channel.name for channel in self.dev.channels[:-2]],
-                timestamps=time_array,
-                meta={"rate": self.sfreq}
-            )
-        
-        else:
-            # only set channels selected for aDBS as timeflux output
+            # Compute timestamps for recently fetched samples
+            time_array = self.get_stamps_for_samples(n_new_samples=sampled_arr.shape[0])
+
+            # Prepare output dataframe
+            samples = DataFrame(data=sampled_arr[:, :-3],  # only include data channels (i.e., not counter)
+                                columns=[ch.name for ch in self.dev.channels[:-3]],
+                                index=time_array)
+            
+            # Set timeflux output only using channels selected for aDBS
             self.o.set(
                 samples.values[:, self.aDBS_channel_bool],
-                names=self.aDBS_ch_names,
+                names=self.aDBS_ch_names, 
                 timestamps=time_array,
                 meta={"rate": self.sfreq}
             )
+            
+        # If use_wallclock_timestamp == false, compute timestamps based on successive additions of 1/fs for each sample fetched from TMSi starting from 1/fs.
+        # This is done inside out.set(). set() also adds a lsl local_clock timestamp column to the data. When using this method, different timeflux outputs 
+        # will be set using either selected channels or the full dataset by employing different output names
+        else:
 
-        ### SAVING OF RAW DATA
+            # Get a current lsl timestamp
+            timestamp_received = local_clock()
 
-        # merge timestamps and samples to push for storing
-        if self.tmsi_settings["save_via_lsl"]:
+            # Set timeflux output only using channels selected for aDBS using topic "selection"
+            self.o_selection.data, self.o_selection.meta  = self.out_selection.set(samples=sampled_arr[:, :-3][:,self.aDBS_channel_bool],
+                                                                                   timestamp_received=timestamp_received)
+
+            # Set timeflux output only using channels selected for aDBS using topic "all"     
+            self.o_all.data, self.o_all.meta  = self.out_all.set(samples=sampled_arr[:, :-3],
+                                                                 timestamp_received=timestamp_received)
+            
+
+        # Transmit marker with wall clock time every iteration and regularly transmit data
+        # with all channels to LSL if save_via_lsl == true and use_wallclock_timestamp == true.
+        if self.tmsi_settings["use_wallclock_timestamp"] & self.tmsi_settings["save_via_lsl"]:
+            
+            # merge timestamps and samples to push for storing
             temp_store_arr = np.concatenate(
                 [samples.values, time_array], axis=1,
             )
@@ -228,27 +225,13 @@ class Tmsisampler(Node):
                     pushthrough=True,
                 )
                 self.temp_raw_storing = []  # clean up
-            
-
-
-        
-        # consider TMSi filewriter
-        # # Initialise a file-writer class (Poly5-format) and state its file path
-        # file_writer = FileWriter(FileFormat.poly5, join(measurements_dir,"Example_envelope_plot.poly5"))
-
-
-            
-
-        # except:  # comment out for debugging
-        #     self.close()
-
 
     def get_samples(self, FETCH_UNTIL_Q_EMPTY: bool = True,
                     MIN_BLOCK_SIZE: int = 0,
                     RESHAPE_ARRAY: bool = True,):
         """
         Fetches samples from SAGA by receiving samples from
-        the queue for a specified duration (min_sample_size_sec)
+        the queue for a specified duration (MIN_BLOCK_SIZE_msec)
 
         Arguments:
             - FETCH_UNTIL_Q_EMPTY: default is true, samples
@@ -296,7 +279,6 @@ class Tmsisampler(Node):
 
         return sampled_arr
 
-
     def get_stamps_for_samples(self, n_new_samples):
         """
         Arguments:
@@ -307,38 +289,29 @@ class Tmsisampler(Node):
             - array containing timestamps based on last
                 timestamp where previous block stopped
         """
-        if self.tmsi_settings['USE_SINGLE_STARTTIME']:
-            if not self.first_block_taken:
-                self.TIME_ZERO = datetime.now(tz=timezone.utc) # current time
-                time_array = np.flip(np.array(
-                    [self.TIME_ZERO - (
-                        np.arange(0, n_new_samples) * self.txdelta
-                    )]
-                ).ravel())
-                self.first_block_taken = True
-            else:
-                # create timestamp list with timedelta of sampling freq, for correct shape
-                time_array = np.array(
-                    [self.TIME_ZERO + (
-                        np.arange(n_new_samples) * self.txdelta
-                    )]
-                ).ravel()
-                # update startin time for next block, next timestamp not included in current output block
-                self.TIME_ZERO += self.txdelta * n_new_samples
 
-        else:
-            dt = datetime.now(tz=timezone.utc) # current time
-            # print(f'after getting samples: {dt}') 
-            txdelta = timedelta(seconds=1 / self.dev.config.sample_rate) # time interval (i.e., 1/fs)
-            # create timestamp list with current timestamp as the latest timepoint
+        if not self.first_block_taken:
+            # get wall clock time on the first call
+            self.TIME_ZERO = datetime.now(tz=timezone.utc) # current time
             time_array = np.flip(np.array(
-                [dt - (np.arange(n_new_samples/len(self.dev.channels)) * txdelta)]
+                [self.TIME_ZERO - (
+                    np.arange(0, n_new_samples) * self.txdelta
+                )]
             ).ravel())
+            self.first_block_taken = True
+        else:
+            # create timestamp list with timedelta of sampling freq, for correct shape
+            time_array = np.array(
+                [self.TIME_ZERO + (
+                    np.arange(n_new_samples) * self.txdelta
+                )]
+            ).ravel()
+            # update startin time for next block, next timestamp not included in current output block
+            self.TIME_ZERO += self.txdelta * n_new_samples
         
         return time_array
 
-
-    def close(self):
+    def terminate(self):
 
         """
         Stops recording and closes connection to SAGA device
@@ -358,8 +331,6 @@ class Tmsisampler(Node):
                 print('\t...Closing connection to SAGA...')
                 self.dev.close()
                 print('\t...Connection to SAGA closed...')
-
-
 
 if __name__ == '__main__':
     """

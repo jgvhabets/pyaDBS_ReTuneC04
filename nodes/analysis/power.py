@@ -12,10 +12,10 @@ from pylsl import local_clock
 
 class Power(Node):
     
-    def __init__(self):
+    def __init__(self, config_filename='config.json'):
         
         # load configuration
-        self.cfg = utils.get_config_settings()
+        self.cfg = utils.get_config_settings(config_filename)
         self.power_cfg = self.cfg["analysis"]["power"]
 
         # set parameters for power calculation        
@@ -24,7 +24,7 @@ class Power(Node):
 
         # initialize output class
         self.out = utils.output(rate=self.cfg['analysis']['power']['rate'], 
-                                channels=self.cfg['rec']['tmsi']['recording_channels'])      
+                                channels=self.cfg['rec']['tmsi']['aDBS_channels'])      
         
     def update(self):
 

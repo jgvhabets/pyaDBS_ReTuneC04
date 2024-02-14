@@ -1,16 +1,15 @@
 {
     "rec": {
         "tmsi": {
-            "queue_size": 0,
-            "min_sample_size_sec": 0.1,
-            "use_lsl": false,
             "save_via_lsl": false,
-            "sample_secs_save_lsl": 1,
-            "FETCH_FULL_Q": false,
-            "MIN_BLOCK_SIZE_msec": 250,
+            "use_wallclock_timestamp": false,
+            "queue_size": 0,
+            "sample_secs_save_lsl": [],
             "sampling_rate": 1000,
-            "USE_SINGLE_STARTTIME": true
-            "recording_channels": ["X"],
+            "FETCH_FULL_Q": true,
+            "MIN_BLOCK_SIZE_msec": [],
+            "recording_channel_types": ["X"],
+            "aDBS_channels": ["X"]
         }
     },
     "analysis": {
@@ -31,7 +30,6 @@
         }
     },
     "CONNECT_NEUROOMEGA": false,
-    "LSL_workflow": true,
     "stim": {
         "rate": 20,
         "detection_blank_period": 5,

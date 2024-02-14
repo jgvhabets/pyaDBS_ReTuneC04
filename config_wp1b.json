@@ -1,21 +1,18 @@
 {
     "rec": {
         "tmsi": {
+            "save_via_lsl": true,
+            "use_wallclock_timestamp": true,
             "queue_size": 0,
-            "min_sample_size_sec": 0.1,
-            "use_lsl": false,
-            "save_via_lsl": false,
             "sample_secs_save_lsl": 1,
-            "sampling_rate_divider": 4,
+            "sampling_rate": 1000,
             "FETCH_FULL_Q": false,
             "MIN_BLOCK_SIZE_msec": 250,
-            "USE_SINGLE_STARTTIME": true,
             "recording_channel_types": ["ACC", "LFP", "ECOG", "EMG"],
             "aDBS_channels": ["ACC_L_X"]
         }
     },
     "CONNECT_NEUROOMEGA": false,
-    "LSL_workflow": false,
     "stim": {
         "detection_blank_period": 15,
         "onset_period": 5,

@@ -12,14 +12,20 @@ graphs:
     - id: TmsiSampler
       module: nodes.TMSi.tmsi_sampler
       class: Tmsisampler
+      params:
+        config_filename: "config_wp1a.json"
     # Epoch
     - id: Epoch
       module: nodes.data_flow.epoch
       class: Epoch
+      params:
+        config_filename: "config_wp1a.json"
     # Signal processing node: Compute biomarker
     - id: Power
       module: nodes.analysis.power
       class: Power
+      params:
+        config_filename: "config_wp1a.json"
     # Output nodes: LSL node sending data to LSL stream
     - id: LSL_Saga
       module: nodes.data_flow.lsl
@@ -33,11 +39,11 @@ graphs:
         name: Power
     # EDGES ------------------------------   
     edges: 
-      - source: TmsiSampler
+      - source: TmsiSampler:selection
         target: Epoch
       - source: Epoch
         target: Power
-      - source: TmsiSampler
+      - source: TmsiSampler:all
         target: LSL_Saga
       - source: Power
         target: LSL_Power
@@ -67,10 +73,14 @@ graphs:
     - id: SingleThreshold
       module: nodes.aDBS.single_threshold
       class: Single_threshold
+      params:
+        config_filename: "config_wp1a.json"
     # Stimulator node: Controls stim params on neuroomega
     - id: Stimulator
       module: nodes.AO.AO_stim_matlab
       class: AO_stim
+      params:
+        config_filename: "config_wp1a.json"
      # Output nodes: LSL node sending data to LSL stream
     - id: LSL_StimParams
       module: nodes.data_flow.lsl

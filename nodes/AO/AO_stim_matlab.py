@@ -31,12 +31,13 @@ class AO_stim(Node):
         self, macNO = 'F4:5E:AB:6B:6D:A1',
         AO_connection: str = 'matlab',
         NO_CONNECTED: bool = False,
+        config_filename='config.json'
     ):
         # default start in false
         self.NO_CONNECTED = NO_CONNECTED
         
         # get configuration settings
-        self.cfg = utils.get_config_settings()
+        self.cfg = utils.get_config_settings(config_filename)
 
         # connect to AO
         if self.cfg['CONNECT_NEUROOMEGA']:

@@ -15,7 +15,7 @@ class Single_threshold(Node):
     def __init__(self, config_filename='config.json',):
 
         # load configuration 
-        self.cfg = utils.get_config_settings()
+        self.cfg = utils.get_config_settings(config_filename)
         self.stim_cfg = self.cfg['stim']
         self.stim_params = pd.DataFrame(self.cfg['stim']['stim_params'], index=[0])
         self.rate = self.stim_cfg['rate']
