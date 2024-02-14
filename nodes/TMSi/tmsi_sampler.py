@@ -7,13 +7,12 @@ Adjusted from https://gitlab.com/tmsi/tmsi-python-interface/
 to test stand alone on WIN: python -m  nodes.TMSi.tmsi_sampler
 """
 
-# %%
-
 # general
 import numpy as np
 from pandas import DataFrame
 from datetime import datetime, timedelta, timezone
-import queue, json, time
+import queue
+from pylsl import local_clock
 
 # add tmsi repo to path
 from nodes.TMSi.add_tmsi_repo import add_tmsi_repo
@@ -85,10 +84,10 @@ class Tmsisampler(Node):
         # self.update_sensors()  # redundant in new TMSi-Python version
 
         # set sampling rate
-        self.dev.config.set_sample_rate(ChannelType.all_types, self.tmsi_settings['sampling_rate_divider'])
+        self.dev.config.base_sample_rate = 4000
+        sampling_rate_divider = 4000 / self.tmsi_settings['sampling_rate']
+        self.dev.config.set_sample_rate(ChannelType.all_types, sampling_rate_divider)
         self.sfreq = self.dev.config.sample_rate
-        self.txdelta = timedelta(seconds=1 / self.sfreq)
-
 
         # display updated enabled channels and sampling rate
         print(f'Updated sampling rate: {self.sfreq} Hz')
@@ -111,6 +110,9 @@ class Tmsisampler(Node):
             self.MIN_TMSI_samples = self.sfreq / (1000 / self.tmsi_settings["MIN_BLOCK_SIZE_msec"])
         else:
             self.MIN_TMSI_samples = 0  # not used, but default value
+
+        # initialize output class
+        self.out = utils.output(self.sfreq, self.cfg['rec']['tmsi']['recording_channels'])
 
         # start sampling on tmsi
         self.dev.start_measurement()
@@ -152,6 +154,10 @@ class Tmsisampler(Node):
         
     def update(self):
 
+        timestamp_received = local_clock()
+        # prepare timeflux output (as DataFrame)
+        self.o.data, self.o.meta  = self.out.set(samples=sampled_arr[:, :-3],
+                                                 timestamp_received=timestamp_received)
         # comment out for debugging
         # try:
 
@@ -257,26 +263,16 @@ class Tmsisampler(Node):
         # start with empty array
         sampled_arr = np.array([])
 
-        # # as long as there are less samples fetched from the queue than the amount of samples available in min_sample_size_sec, continue fetching samples
-        # while (len(sampled_arr) / len(self.dev.channels)) < (self.dev.config.sample_rate * self.cfg['rec']['tmsi']['min_sample_size_sec']):           
         # if there is no data available yet in the queue, wait for a bit until there is data
-        # dt = datetime.now(tz=timezone.utc) # current time
-        # print(f'before waiting : {dt}') 
         while self.queue.qsize() == 0:
-            # print('waiting for block to fill up...')
             continue
 
         if FETCH_UNTIL_Q_EMPTY:
             # as long as there is data in the queue, fetch it
             while self.queue.qsize() > 0:
-                # dt = datetime.now(tz=timezone.utc) # current time
-                # print(f'wait complete, block there, current time: {dt}') 
                 # get available samples from queue
                 sampled = self.queue.get()
-                # print(f'size of queue after GET: {self.queue.qsize()}')
                 self.queue.task_done()  # obligatory second line to get sampled samples
-                # dt = datetime.now(tz=timezone.utc) # current time
-                # print(f'after getting samples: {dt}') 
                 # add new samples to previously fetched samples
                 sampled_arr = np.concatenate((sampled_arr, sampled.samples))
         
@@ -290,11 +286,6 @@ class Tmsisampler(Node):
                 self.queue.task_done()  # obligatory second line to get sampled samples
                 # add new samples to previously fetched samples
                 sampled_arr = np.concatenate((sampled_arr, sampled.samples))
-                # print(f'samples total length: {len(sampled_arr)}')
-                
-            # print('number of samples fetched: '
-            #       f'{len(sampled_arr)/ len(self.dev.channels)}')
-            # print(f'size of queue after samples were fetched: {self.queue.qsize()}')
 
         # reshape samples that are given in uni-dimensional form
         if RESHAPE_ARRAY:

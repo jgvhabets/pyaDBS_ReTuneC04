@@ -4,13 +4,6 @@
 
 graphs:
 
-  # data broker graph
-  - id: Broker
-    nodes:
-    - id: broker
-      module: timeflux.nodes.zmq
-      class: Broker
-  
   # Signal processing graph: Fetches samples and computes biomarkers
   - id: SignalProcessing
     # NODES ------------------------------
@@ -19,50 +12,57 @@ graphs:
     - id: TmsiSampler
       module: nodes.TMSi.tmsi_sampler
       class: Tmsisampler
-    # Window node: Implements a sliding window over the input data
-    - id: SlideWindow
-      module: timeflux.nodes.window
-      class: Slide
-      params:
-        length: 1
-        step: 0.1
+    # Epoch
+    - id: Epoch
+      module: nodes.data_flow.epoch
+      class: Epoch
     # Signal processing node: Compute biomarker
-    - id: Mean
-      module: nodes.analysis.mean
-      class: Mean
-    # Publisher nodes: Sending data to broker
-    - id: Pub_TmsiSampler
-      module: timeflux.nodes.zmq
-      class: Pub
+    - id: Power
+      module: nodes.analysis.power
+      class: Power
+    # Output nodes: LSL node sending data to LSL stream
+    - id: LSL_Saga
+      module: nodes.data_flow.lsl
+      class: Send
       params:
-        topic: TmsiSampler
-    - id: Pub_Mean
-      module: timeflux.nodes.zmq
-      class: Pub
+        name: Saga
+    - id: LSL_Power
+      module: nodes.data_flow.lsl
+      class: Send
       params:
-        topic: Mean
+        name: Power
     # EDGES ------------------------------   
     edges: 
       - source: TmsiSampler
-        target: SlideWindow
-      - source: SlideWindow
-        target: Mean
+        target: Epoch
+      - source: Epoch
+        target: Power
       - source: TmsiSampler
-        target: Pub_TmsiSampler
-      - source: Mean
-        target: Pub_Mean
+        target: LSL_Saga
+      - source: Power
+        target: LSL_Power
     rate: 0  # Run this graph x times per second
 
   # Stimulation graph: Receives biomarker and controls stimulation
   - id: Stimulation
   # NODES ------------------------------
     nodes:
-    # Subscriber node: Fetching samples the broker which in turn receives data from the SignalProcessing graph
-    - id: Sub_Mean
-      module: timeflux.nodes.zmq
-      class: Sub
+    # Input nodes: Receive data from LSL stream
+    - id: LSL_Power
+      module: nodes.data_flow.lsl
+      class: Receive
       params:
-        topics: Mean
+        prop: name
+        value: Power
+        max_samples: 1
+    - id: LSL_StimSwitch
+      module: nodes.data_flow.lsl
+      class: Receive
+      params:
+        prop: name
+        value: StimSwitch
+        max_samples: 1
+        timeout: 0.01
     # Control node: Check biomarker and adjust stimulation parameters
     - id: SingleThreshold
       module: nodes.aDBS.single_threshold
@@ -71,54 +71,79 @@ graphs:
     - id: Stimulator
       module: nodes.AO.AO_stim_matlab
       class: AO_stim
-    # Publisher nodes: Sending data to broker
-    - id: Pub_Stimulator
-      module: timeflux.nodes.zmq
-      class: Pub
+     # Output nodes: LSL node sending data to LSL stream
+    - id: LSL_StimParams
+      module: nodes.data_flow.lsl
+      class: Send
       params:
-        topic: Stimulator
+        name: StimParams
     # EDGES ------------------------------   
     edges: 
-      - source: Sub_Mean
-        target: SingleThreshold
+      - source: LSL_StimSwitch
+        target: SingleThreshold:StimSwitch
+      - source: LSL_Power
+        target: SingleThreshold:Biomarker
       - source: SingleThreshold
         target: Stimulator
       - source: Stimulator
-        target: Pub_Stimulator
+        target: LSL_StimParams
     rate: 0  # Run this graph x times per second
 
   # Monitor graph: Receives data from broker and visualizes it
   - id: Monitor
     nodes:
     # NODES ------------------------------
-    # Subscriber nodes: Receive data from Broker
-    - id: Sub_TmsiSampler
-      module: timeflux.nodes.zmq
-      class: Sub
+    # Input nodes: Receive data from LSL stream
+    - id: LSL_Saga
+      module: nodes.data_flow.lsl
+      class: Receive
       params:
-        topics: TmsiSampler
-    - id: Sub_Mean
-      module: timeflux.nodes.zmq
-      class: Sub
+        prop: name
+        value: Saga
+    - id: LSL_Power
+      module: nodes.data_flow.lsl
+      class: Receive
       params:
-        topics: Mean
-    - id: Sub_Stimulator
-      module: timeflux.nodes.zmq
-      class: Sub
+        prop: name
+        value: Power
+    - id: LSL_StimParams
+      module: nodes.data_flow.lsl
+      class: Receive
       params:
-        topics: Stimulator
+        prop: name
+        value: StimParams
+    # Synchronizer node: Adds clock time to stream timestamps
+    - id: Synchronizer
+      module: nodes.data_flow.sync
+      class: Synchronizer
     # UI node: Receives data from subscribers and plots them
     - id: UI
       module: timeflux_ui.nodes.ui
       class: UI
+    # Output node: LSL node sending data to LSL stream
+    - id: LSL_StimSwitch
+      module: nodes.data_flow.lsl
+      class: Send
+      params:
+        name: StimSwitch
+        channel_format: string
+        labels: switch
     # EDGES ------------------------------   
     edges:
-      - source: Sub_TmsiSampler
-        target: UI:TmsiSampler
-      - source: Sub_Mean
-        target: UI:Mean
-      - source: Sub_Stimulator
-        target: UI:Stimulator
-    rate: 0
+      - source: LSL_Saga
+        target: Synchronizer:Saga
+      - source: LSL_Power
+        target: Synchronizer:Power
+      - source: LSL_StimParams
+        target: Synchronizer:StimParams
+      - source: Synchronizer:Saga
+        target: UI:Saga
+      - source: Synchronizer:Power
+        target: UI:Power
+      - source: Synchronizer:StimParams
+        target: UI:StimParams
+      - source: UI:events
+        target: LSL_StimSwitch
+    rate: 5
 
   

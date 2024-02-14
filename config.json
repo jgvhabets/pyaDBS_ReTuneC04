@@ -6,20 +6,38 @@
             "use_lsl": false,
             "save_via_lsl": false,
             "sample_secs_save_lsl": 1,
-            "sampling_rate_divider": 4,
             "FETCH_FULL_Q": false,
             "MIN_BLOCK_SIZE_msec": 250,
-            "USE_SINGLE_STARTTIME": true,
-            "recording_channels": ["ACC_L_X"]
+            "sampling_rate": 1000,
+            "USE_SINGLE_STARTTIME": true
+            "recording_channels": ["X"],
+        }
+    },
+    "analysis": {
+        "mean": {
+            "rate": 20 
+        },
+        "power": {
+            "rate": 20,
+            "f_band_min": 4,
+            "f_band_max": 6
+        }
+    },
+    "data_flow": {
+        "epoch": {
+            "rate": 1000,
+            "step_duration": 0.05,
+            "window_duration": 2
         }
     },
     "CONNECT_NEUROOMEGA": false,
     "LSL_workflow": true,
     "stim": {
-        "detection_blank_period": 15,
-        "onset_period": 5,
-        "termination_period": 5,
-        "ramp_period": 10,
+        "rate": 20,
+        "detection_blank_period": 5,
+        "onset_period": 3,
+        "termination_period": 3,
+        "ramp_period": 1,
         "threshold": 0.5,
         "stim_amp_low": 0,
         "stim_amp_high": 2,
