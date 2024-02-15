@@ -14,18 +14,33 @@ graphs:
       class: Tmsisampler
       params:
         config_filename: "config_wp1a.json"
-    # Epoch
-    - id: Epoch
+    # Epoch node: Epoch raw data in junks of the same length
+    - id: EpochRaw
       module: nodes.data_flow.epoch
       class: Epoch
       params:
         config_filename: "config_wp1a.json"
+        config_field: "epoch_raw"
     # Signal processing node: Compute biomarker
     - id: Power
       module: nodes.analysis.power
       class: Power
       params:
         config_filename: "config_wp1a.json"
+    # Epoch node: Create junks of power estimates
+    - id: EpochPower
+      module: nodes.data_flow.epoch
+      class: Epoch
+      params:
+        config_filename: "config_wp1a.json"
+        config_field: "epoch_power"
+    # Mean node: Average over junks of power estimates
+    - id: Mean
+      module: nodes.analysis.mean
+      class: Mean
+      params:
+        config_filename: "config_wp1a.json"
+        config_field: "mean"
     # Output nodes: LSL node sending data to LSL stream
     - id: LSL_Saga
       module: nodes.data_flow.lsl
@@ -40,12 +55,16 @@ graphs:
     # EDGES ------------------------------   
     edges: 
       - source: TmsiSampler:selection
-        target: Epoch
-      - source: Epoch
+        target: EpochRaw
+      - source: EpochRaw
         target: Power
+      - source: Power
+        target: EpochPower
+      - source: EpochPower
+        target: Mean
       - source: TmsiSampler:all
         target: LSL_Saga
-      - source: Power
+      - source: Mean
         target: LSL_Power
     rate: 0  # Run this graph x times per second
 

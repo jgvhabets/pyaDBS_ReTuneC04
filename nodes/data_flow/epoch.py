@@ -15,16 +15,17 @@ class Epoch(Node):
         o (Port): Default output, provides DataFrame.
     """
 
-    def __init__(self, config_filename='config.json'):
+    def __init__(self, config_filename='config.json', config_field="epoch"):
 
-        # load configurations
-        self.cfg = utils.get_config_settings(config_filename)
-        self.recording_channels = self.cfg['rec']['tmsi']['aDBS_channels']
-        self._win_size = utils.convert_time_samples(freq=self.cfg["rec"]["tmsi"]["sampling_rate"], time=self.cfg['data_flow']['epoch']['window_duration'])
-        self._step_size = utils.convert_time_samples(freq=self.cfg["rec"]["tmsi"]["sampling_rate"], time=self.cfg['data_flow']['epoch']['step_duration'])
+        # load configuration
+        cfg = utils.get_config_settings(config_filename)
+        self.recording_channels = cfg['rec']['tmsi']['aDBS_channels']
+        self.cfg_epoch = cfg['data_flow'][config_field]
+        self._win_size = utils.convert_time_samples(freq=self.cfg_epoch["rate_in"], time=self.cfg_epoch["window_duration"])
+        self._step_size = utils.convert_time_samples(freq=self.cfg_epoch["rate_in"], time=self.cfg_epoch['step_duration'])
 
         # initialize output class
-        self.out = utils.output(rate=self.cfg['data_flow']['epoch']['rate'], 
+        self.out = utils.output(rate=self.cfg_epoch['rate_out'], 
                                 channels=self.recording_channels)
         
         # initialize buffer

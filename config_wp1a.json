@@ -23,10 +23,17 @@
         }
     },
     "data_flow": {
-        "epoch": {
-            "rate": 1000,
+        "epoch_raw": {
+            "rate_in": 1000,
+            "rate_out": 20,
             "step_duration": 0.05,
             "window_duration": 2
+        },
+        "epoch_power": {
+            "rate_in": 20,
+            "rate_out": 20,
+            "step_duration": 0.05,
+            "window_duration": 10
         }
     },
     "CONNECT_NEUROOMEGA": false,
