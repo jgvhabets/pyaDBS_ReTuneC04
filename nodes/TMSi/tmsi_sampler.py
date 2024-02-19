@@ -156,6 +156,8 @@ class Tmsisampler(Node):
         # Get samples from SAGA, reshape internally
         sampled_arr = self.get_samples()
 
+        # print(f'tmsi_sampler -- data input at: {local_clock()}')
+
         # Prepare output depending on use_wallclock_timestamp
 
         # If use_wallclock_timestamp == true, compute timestamps with get_stamps_for_samples(). This generates timestamps based on 
@@ -202,6 +204,7 @@ class Tmsisampler(Node):
                 timestamp_received=timestamp_received
             )
             
+            # print(f'tmsi_sampler -- sent from tmsi_sampler at: {local_clock()}, package number {self.o_selection.data["package_numbers"].iat[0]}, package id {self.o_selection.data["package_ids"].iat[0]}')
 
         # Transmit marker with wall clock time every iteration and regularly transmit data
         # with all channels to LSL if save_via_lsl == true and use_wallclock_timestamp == true.
@@ -350,28 +353,6 @@ class Tmsisampler(Node):
                 print('\t...Closing connection to SAGA...')
                 self.dev.close()
                 print('\t...Connection to SAGA closed...')
-
-    def close(self):
-
-        """
-        Stops recording and closes connection to SAGA device
-        """
-
-        # run close routine only if a device was found earlier
-        if hasattr(self, 'dev'):
-
-            # stop sampling if SAGA is currently sampling
-            if self.dev.status.state == DeviceState.sampling:
-                print('\t...Stopping recording on SAGA...')
-                self.dev.stop_measurement()
-                print('\t...Recording on SAGA stopped...')
-            
-            # close connection to SAGA if connected
-            if self.dev.status.state == DeviceState.connected:
-                print('\t...Closing connection to SAGA...')
-                self.dev.close()
-                print('\t...Connection to SAGA closed...')
-
 
 if __name__ == '__main__':
     """
