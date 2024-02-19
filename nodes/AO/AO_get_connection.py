@@ -51,13 +51,13 @@ def apply_and_stop_test_stim(no_engine):
         no_engine.AO_DefaultStimulation(
             130,  # StimFreqRight
             0.5,  # StimAmpRight_mA
-            23,  # StimFreqLeft
+            130,  # StimFreqLeft
             0.5,  # StimAmpLeft_mA
-            10.0,  # Duration_Sec
+            0.5,  # Duration_Sec
         )
         print('test stim succesfully started')
 
-        time.sleep(5)  # wait for 5 seconds
+        time.sleep(0.5)  # wait for 5 seconds
 
         _ = no_engine.AO_DefaultStopStimulation()  # return intern matlab value (no content)
         print('test stim succesfully stopped')
