@@ -5,35 +5,35 @@
             "use_wallclock_timestamp": false,
             "queue_size": 0,
             "sample_secs_save_lsl": [],
-            "sampling_rate": 1000,
+            "sampling_rate": 500,
             "FETCH_FULL_Q": true,
             "MIN_BLOCK_SIZE_msec": [],
-            "recording_channel_types": ["X"],
-            "aDBS_channels": ["X"]
+            "recording_channel_types": ["ACC"],
+            "aDBS_channels": ["ACC_R_X"]
         }
     },
     "analysis": {
         "mean": {
-            "rate": 20 
+            "rate": 10 
         },
         "power": {
-            "rate": 20,
+            "rate": 10,
             "f_band_min": 4,
             "f_band_max": 6
         }
     },
     "data_flow": {
         "epoch_raw": {
-            "rate_in": 1000,
-            "rate_out": 20,
-            "step_duration": 0.05,
-            "window_duration": 2
+            "rate_in": 500,
+            "rate_out": 10,
+            "step_duration": 0.1,
+            "window_duration": 0.5
         },
         "epoch_power": {
-            "rate_in": 20,
-            "rate_out": 20,
-            "step_duration": 0.05,
-            "window_duration": 10
+            "rate_in": 10,
+            "rate_out": 10,
+            "step_duration": 0.1,
+            "window_duration": 0.1
         }
     },
     "CONNECT_NEUROOMEGA": false,

@@ -10,7 +10,7 @@ to test stand alone on WIN: python -m  nodes.TMSi.tmsi_sampler
 # general
 import numpy as np
 from pandas import DataFrame
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import queue
 from pylsl import local_clock
 import nodes.TMSi.tmsi_utils as tmsi_utils
@@ -21,7 +21,7 @@ from TMSiSDK import tmsi_device, sample_data_server
 from TMSiSDK.device import DeviceInterfaceType, DeviceState, ChannelType
 from pylsl import StreamInfo, StreamOutlet
 
-
+from sys import getsizeof
 
 class Tmsisampler(Node):
     """
@@ -81,6 +81,7 @@ class Tmsisampler(Node):
         sampling_rate_divider = 4000 / self.tmsi_settings['sampling_rate']
         self.dev.config.set_sample_rate(ChannelType.all_types, sampling_rate_divider)
         self.sfreq = self.dev.config.sample_rate
+        self.txdelta = timedelta(seconds=1 / self.sfreq)
 
         # display updated enabled channels and sampling rate
         print(f'Updated sampling rate: {self.sfreq} Hz')
@@ -119,15 +120,23 @@ class Tmsisampler(Node):
       
         # Open LSL-stream via pylsl for saving of all TMSi data if save_via_lsl == True
         if self.tmsi_settings["save_via_lsl"]:
-            # Initialise the lsl-stream for raw data
-            tmsiRaw_streamInfo = StreamInfo(name="rawTMSi",
-                                            type="EEG",
-                                            channel_count=len(self.channels) + 1,
-                                            nominal_srate=self.sfreq,)
-            self.rawTMSi_outlet = StreamOutlet(tmsiRaw_streamInfo)
-            self.temp_raw_storing = []
             # define number of samples of blocks to be saved in LSL
             self.n_samples_save = self.tmsi_settings["sample_secs_save_lsl"] * self.sfreq
+            print(f'SET channel count buffer: {len(self.dev.channels)} plus one')
+            # Initialise the lsl-stream for raw data
+            # minus because of counter and status (CHECK ?)
+            # plus one for later created timestamp column 
+            tmsiRaw_streamInfo = StreamInfo(name="rawTMSi",
+                                            type="EEG",
+                                            channel_count=len(self.dev.channels) + 1,  # add extra column for timestmaps later created
+                                            nominal_srate=self.sfreq,
+                                            channel_format='float32')
+            self.rawTMSi_outlet = StreamOutlet(
+                tmsiRaw_streamInfo,
+                # max_buffered=10
+            )
+            self.temp_raw_storing = []
+            
 
             # Initialise the lsl-stream for raw data
             markers_streamInfo = StreamInfo(name="rawTMSi_markers",
@@ -136,7 +145,7 @@ class Tmsisampler(Node):
                                             channel_format="string")
             self.marker_outlet = StreamOutlet(markers_streamInfo)
             # as first push, send selected channel names for saving
-            self.marker_outlet.push_sample(self.ch_names)  # include time
+            self.marker_outlet.push_sample([str(self.ch_names)])  # include time
 
         ### Start sampling on TMSi
         self.dev.start_measurement()
@@ -159,8 +168,8 @@ class Tmsisampler(Node):
             time_array = self.get_stamps_for_samples(n_new_samples=sampled_arr.shape[0])
 
             # Prepare output dataframe
-            samples = DataFrame(data=sampled_arr[:, :-3],  # only include data channels (i.e., not counter)
-                                columns=[ch.name for ch in self.dev.channels[:-3]],
+            samples = DataFrame(data=sampled_arr[:, :-2],  # only include data channels (i.e., not counter)
+                                columns=[ch.name for ch in self.dev.channels[:-2]],
                                 index=time_array)
             
             # Set timeflux output only using channels selected for aDBS
@@ -170,7 +179,7 @@ class Tmsisampler(Node):
                 timestamps=time_array,
                 meta={"rate": self.sfreq}
             )
-            
+     
         # If use_wallclock_timestamp == false, compute timestamps based on successive additions of 1/fs for each sample fetched from TMSi starting from 1/fs.
         # This is done inside out.set(). set() also adds a lsl local_clock timestamp column to the data. When using this method, different timeflux outputs 
         # will be set using either selected channels or the full dataset by employing different output names
@@ -180,12 +189,18 @@ class Tmsisampler(Node):
             timestamp_received = local_clock()
 
             # Set timeflux output only using channels selected for aDBS using topic "selection"
-            self.o_selection.data, self.o_selection.meta  = self.out_selection.set(samples=sampled_arr[:, :-3][:,self.aDBS_channel_bool],
-                                                                                   timestamp_received=timestamp_received)
+            (self.o_selection.data,
+             self.o_selection.meta)  = self.out_selection.set(
+                 samples=sampled_arr[:, :-2][:,self.aDBS_channel_bool],
+                 timestamp_received=timestamp_received
+            )
 
             # Set timeflux output only using channels selected for aDBS using topic "all"     
-            self.o_all.data, self.o_all.meta  = self.out_all.set(samples=sampled_arr[:, :-3],
-                                                                 timestamp_received=timestamp_received)
+            (self.o_all.data, 
+            self.o_all.meta)  = self.out_all.set(
+                samples=sampled_arr[:, :-2],
+                timestamp_received=timestamp_received
+            )
             
 
         # Transmit marker with wall clock time every iteration and regularly transmit data
@@ -194,16 +209,18 @@ class Tmsisampler(Node):
             
             # merge timestamps and samples to push for storing
             temp_store_arr = np.concatenate(
-                [samples.values, time_array], axis=1,
+                [samples.values,
+                 np.atleast_2d([t.timestamp() for t in time_array]).T],
+                axis=1,
             )
 
             # send Markers every raw output: 
             # send start time and shape of block and current time
             self.marker_outlet.push_sample(
-                x=['RAW_PUSHED (t0, shape, current_t)',
-                   time_array[0],
-                   samples.shape,
-                   datetime.now(tz=timezone.utc)]
+                x=[f'RAW_PUSHED (t0, shape, current_t)'
+                   f'{time_array[0]},'
+                   f'{samples.shape},'
+                   f'{datetime.now(tz=timezone.utc)}']
             )
 
             # send sampled array plus used timestamps (in array)
@@ -220,11 +237,13 @@ class Tmsisampler(Node):
 
             # send if present stored block is long enough
             if self.temp_raw_storing.shape[0] > self.n_samples_save:
+                
                 self.rawTMSi_outlet.push_chunk(
                     x=self.temp_raw_storing,
                     pushthrough=True,
                 )
                 self.temp_raw_storing = []  # clean up
+
 
     def get_samples(self, FETCH_UNTIL_Q_EMPTY: bool = True,
                     MIN_BLOCK_SIZE: int = 0,
@@ -331,6 +350,28 @@ class Tmsisampler(Node):
                 print('\t...Closing connection to SAGA...')
                 self.dev.close()
                 print('\t...Connection to SAGA closed...')
+
+    def close(self):
+
+        """
+        Stops recording and closes connection to SAGA device
+        """
+
+        # run close routine only if a device was found earlier
+        if hasattr(self, 'dev'):
+
+            # stop sampling if SAGA is currently sampling
+            if self.dev.status.state == DeviceState.sampling:
+                print('\t...Stopping recording on SAGA...')
+                self.dev.stop_measurement()
+                print('\t...Recording on SAGA stopped...')
+            
+            # close connection to SAGA if connected
+            if self.dev.status.state == DeviceState.connected:
+                print('\t...Closing connection to SAGA...')
+                self.dev.close()
+                print('\t...Connection to SAGA closed...')
+
 
 if __name__ == '__main__':
     """

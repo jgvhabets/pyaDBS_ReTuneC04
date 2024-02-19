@@ -50,11 +50,15 @@ graphs:
     - id: single_threshold
       module: nodes.aDBS.single_threshold
       class: Single_threshold
+      params:
+        config_filename: "config_wp1b.json"
 
     # Stimulation Nodes
     - id: AO_Stim
       module: nodes.AO.AO_stim_matlab
       class: AO_stim
+      params:
+        config_filename: "config_wp1b.json"
     
     # INTER GRAPH COMM. PUBLISHING NODES
     - id: Pub_raw_sig

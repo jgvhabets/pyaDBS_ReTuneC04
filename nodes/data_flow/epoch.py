@@ -42,7 +42,7 @@ class Epoch(Node):
             # add data to buffer
             self.buffer = pd.concat([self.buffer, self.i.data])
 
-            # print(f'epoch -- buffer size: {self.buffer.shape[0]}')
+            print(f'epoch -- buffer size: {self.buffer.shape[0]}')
 
             # Check if buffer has reached window size
             if self.buffer.shape[0] >= self._win_size:

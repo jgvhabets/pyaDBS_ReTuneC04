@@ -55,13 +55,13 @@ def correct_ACC_channelnames(channels, sides=['R', 'L']):
             # correct XYZ to both sides
             for ch in channels:
                 if ch.name == AX and first_side:
-                    print(f'changing "{ch.name}" into "ACC{sides[0]}_{AX}"')
+                    print(f'changing "{ch.name}" into "ACC_{sides[0]}_{AX}"')
                     ch.name = f'ACC_{sides[0]}_{AX}'
                     first_side = False  # prevents more than one rename
                     continue
 
                 if ch.name == AX and second_side:
-                    print(f'changing "{ch.name}" into "ACC{sides[1]}_{AX}"')
+                    print(f'changing "{ch.name}" into "ACC_{sides[1]}_{AX}"')
                     ch.name = f'ACC_{sides[1]}_{AX}'
                     second_side = False
     
