@@ -20,15 +20,14 @@ class Biomarker(Node):
     def __init__(
         self,
         experiment_name='',
-        sfreq=None,
-        seg_len_sec=.25,
     ):
-        self.sfreq = sfreq
-        self.seg_len_sec = seg_len_sec
-
         # load configurations
         self.marker_cfg = utils.get_config_settings(experiment_name)['biomarker']
+        self.tmsi_cfg = utils.get_config_settings(experiment_name)['rec']['tmsi']
 
+        self.sfreq = None
+        # self.sfreq = self.tmsi_cfg['sampling_rate']  # take sample rate from input at first update
+        
         # check correctness of given coh_metric
         self.metric = self.marker_cfg['type']
         allowed_metrics = ['power', 'coh', 'squared_coh',
@@ -38,13 +37,12 @@ class Biomarker(Node):
             f'not in {allowed_metrics}'
         )
         
-        self.f_range = self.marker_cfg['freq_range']
-        
     
     def update(self):
         # check input
-        if not self.i.ready():
-            return
+        if not self.i.ready(): return
+        
+        if self.i.meta["IGNORE"]: return
         
         # copy the meta
         self.o = self.i
@@ -52,10 +50,11 @@ class Biomarker(Node):
         # extract unknown sample freq and replace
         if not self.sfreq:
             self.sfreq = self.i.meta["rate"]
-            self.nperseg = self.seg_len_sec * self.sfreq
+            self.nperseg = self.marker_cfg['epoch_length_sec'] * self.sfreq
         
         if self.metric == 'power':
-            # take mean in case of multiple channels
+            # take mean in case of multiple (ephys) channels
+            # consider to include SSD
             if self.i.data.shape[1] > 1:
                 sig = np.mean(self.i.data, axis=1)
             else:
@@ -65,20 +64,20 @@ class Biomarker(Node):
                 "raw signals have to np.float64"
             )
 
-            # spectral decomposition
+            # full spectral decomposition
             freqs, values = welch(sig, fs=self.sfreq, nperseg=self.nperseg,)
         
         # select frequencies
         sel_values, sel_freqs = select_bandwidths(
             values=values, freqs=freqs,
-            f_min=self.f_range[0], f_max=self.f_range[1]
+            f_min=self.marker_cfg['freq_range'][0],
+            f_max=self.marker_cfg['freq_range'][1]
         )
         value = np.mean(sel_values)
-        # freq = int(np.mean(sel_freqs))
 
         # sets as pandas DataFrame
         self.o.data = pd.DataFrame(
             data=[[value]],
-            columns=[f'{self.metric}: {self.f_range[0]}-{self.f_range[1]} Hz'],
+            columns=[f'{self.metric}: {self.marker_cfg["freq_range"][0]}-{self.marker_cfg["freq_range"][1]} Hz'],
             index=[datetime.now(tz=timezone.utc)]
         )

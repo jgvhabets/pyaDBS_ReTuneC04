@@ -20,7 +20,7 @@ from timeflux.core.node import Node
 from TMSiSDK import tmsi_device, sample_data_server
 from TMSiSDK.device import DeviceInterfaceType, DeviceState, ChannelType
 from pylsl import StreamInfo, StreamOutlet
-
+import time
 from sys import getsizeof
 
 class Tmsisampler(Node):
@@ -100,10 +100,7 @@ class Tmsisampler(Node):
         sample_data_server.registerConsumer(self.dev.id, self.queue)
 
         # load sampling configurations
-        if not self.tmsi_settings["FETCH_FULL_Q"]:
-            self.MIN_TMSI_samples = self.sfreq / (1000 / self.tmsi_settings["MIN_BLOCK_SIZE_msec"])
-        else:
-            self.MIN_TMSI_samples = 0  # not used, but default value
+        self.MIN_TMSI_samples = self.sfreq / (1000 / self.tmsi_settings["MIN_BLOCK_SIZE_msec"])
 
         ### Setup timestamp generation and data flow method
         
@@ -131,10 +128,7 @@ class Tmsisampler(Node):
                                             channel_count=len(self.dev.channels) + 1,  # add extra column for timestmaps later created
                                             nominal_srate=self.sfreq,
                                             channel_format='float32')
-            self.rawTMSi_outlet = StreamOutlet(
-                tmsiRaw_streamInfo,
-                # max_buffered=10
-            )
+            self.rawTMSi_outlet = StreamOutlet(tmsiRaw_streamInfo,)
             self.temp_raw_storing = []
             
 
@@ -145,14 +139,18 @@ class Tmsisampler(Node):
                                             channel_format="string")
             self.marker_outlet = StreamOutlet(markers_streamInfo)
             # as first push, send selected channel names for saving
-            self.marker_outlet.push_sample([str(self.ch_names)])  # include time
+            t = str(datetime.now(tz=timezone.utc))
+            self.marker_outlet.push_sample([str(self.ch_names) + f', time: {t}'])  # include time
+
+            self.LabRec_reminder = True
+            self.LabRec_reminder_done = False
 
         ### Start sampling on TMSi
         self.dev.start_measurement()
         # timelag circa .4 seconds  -> starttime in first block (circa .008 - .02 sec ahead)
 
     def update(self):
-
+        
         # Get samples from SAGA, reshape internally
         sampled_arr = self.get_samples()
 
@@ -174,13 +172,33 @@ class Tmsisampler(Node):
                                 columns=[ch.name for ch in self.dev.channels[:-2]],
                                 index=time_array)
             
-            # Set timeflux output only using channels selected for aDBS
-            self.o.set(
-                samples.values[:, self.aDBS_channel_bool],
-                names=self.aDBS_ch_names, 
-                timestamps=time_array,
-                meta={"rate": self.sfreq}
-            )
+            if self.tmsi_settings["save_via_lsl"] and self.LabRec_reminder:
+                # at first sampling moment, execute LabRecorder reminder, discard data so far
+                self.LabRecorderReminder()  # sets LabRec_reminder false internally in second run (discard all data)
+                print(f'send zeros, length sampled data discarded: {samples.values.shape}')
+                # dont send data yet before LabRecorder reminder
+                self.o.set(
+                    [[float(0)] * len(self.aDBS_ch_names)],
+                    names=self.aDBS_ch_names, 
+                    timestamps=time_array,
+                    meta={"rate": self.sfreq,
+                          "IGNORE": float(1)}
+                )
+            
+            else:
+                # Set timeflux output only using channels selected for aDBS
+                self.o.set(
+                    samples.values[:, self.aDBS_channel_bool],
+                    names=self.aDBS_ch_names, 
+                    timestamps=time_array,
+                    meta={"rate": self.sfreq,
+                          "IGNORE": float(0)}
+                )
+                print(f'...sampler send shape: {samples.values.shape}')
+            
+                
+            
+
      
         # If use_wallclock_timestamp == false, compute timestamps based on successive additions of 1/fs for each sample fetched from TMSi starting from 1/fs.
         # This is done inside out.set(). set() also adds a lsl local_clock timestamp column to the data. When using this method, different timeflux outputs 
@@ -208,8 +226,11 @@ class Tmsisampler(Node):
 
         # Transmit marker with wall clock time every iteration and regularly transmit data
         # with all channels to LSL if save_via_lsl == true and use_wallclock_timestamp == true.
-        if self.tmsi_settings["use_wallclock_timestamp"] & self.tmsi_settings["save_via_lsl"]:
+        if self.tmsi_settings["use_wallclock_timestamp"] & self.tmsi_settings["save_via_lsl"]:                
             
+            # check sampled content
+            if len(samples.values) == 0: return
+
             # merge timestamps and samples to push for storing
             temp_store_arr = np.concatenate(
                 [samples.values,
@@ -274,12 +295,18 @@ class Tmsisampler(Node):
 
         if FETCH_UNTIL_Q_EMPTY:
             # as long as there is data in the queue, fetch it
-            while self.queue.qsize() > 0:
+            SAMPLING = True
+            # sample as long as samples are not reached AND samples are left queue
+            while self.queue.qsize() > 0 or SAMPLING:
                 # get available samples from queue
                 sampled = self.queue.get()
                 self.queue.task_done()  # obligatory second line to get sampled samples
                 # add new samples to previously fetched samples
                 sampled_arr = np.concatenate((sampled_arr, sampled.samples))
+                
+                # stop necessity to sample if n-samples are reached
+                if (len(sampled_arr) / len(self.dev.channels)) > MIN_BLOCK_SIZE:
+                    SAMPLING = False
         
         else:
             # does not empty queue per se, pushes blocks when N-samples is exceeded
@@ -298,7 +325,7 @@ class Tmsisampler(Node):
                                      (len(sampled_arr) // len(self.dev.channels),
                                      len(self.dev.channels)),
                                      order='C',)
-
+        print(f'SEND ARRAY SHAPE: {sampled_arr.shape}')
         return sampled_arr
 
     def get_stamps_for_samples(self, n_new_samples):
@@ -332,6 +359,29 @@ class Tmsisampler(Node):
             self.TIME_ZERO += self.txdelta * n_new_samples
         
         return time_array
+
+
+    def LabRecorderReminder(self):
+        if self.tmsi_settings["LabRec_reminder_sec"] > 0 and not self.LabRec_reminder_done:
+
+            print(
+                '\n\n########################################\n\n'
+                f'!!! {self.tmsi_settings["LabRec_reminder_sec"] + 5}'
+                    ' SECONDS TO START LABRECORDER !!!!!!!'
+                '\n\n########################################\n\n'
+            )
+
+            time.sleep(self.tmsi_settings['LabRec_reminder_sec'])  # 10 seconds extra :)
+            print('LabRecorder waiting time passed\n')
+        
+            self.LabRec_reminder_done = True  # prevent another reminder execution
+
+        else:
+            # only in second update, reminder False to discard the data sampled during reminder
+            self.LabRec_reminder = False
+            print('LabRecorder reminder switched OFF')
+
+
 
     def terminate(self):
 

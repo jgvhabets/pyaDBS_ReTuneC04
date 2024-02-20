@@ -21,9 +21,14 @@ def get_config_settings(
             cfg = json.load(file)
     
     
-    if not folder_filename.endswith('.json'):
+    if not folder_filename.endswith('.json') and len(folder_filename) > 0:
         with open(os.path.join("configs", folder_filename, "config_timeflux.json"), 'r') as file:
             cfg = json.load(file)
+
+    else:
+        with open(os.path.join("configs", "config_timeflux.json"), 'r') as file:
+            cfg = json.load(file)
+
 
     return cfg
 

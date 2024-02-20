@@ -14,6 +14,8 @@ from timeflux.core.node import Node
 import utils.utils as utils
 from nodes.TMSi.tmsi_utils import sig_vector_magn
 
+from pylsl import StreamInfo, StreamOutlet
+
 class Compareinput(Node):
     """
     
@@ -24,16 +26,15 @@ class Compareinput(Node):
     def __init__(
         self,
         experiment_name='',
-        sfreq=None,
     ):
         ### load configurations
         self.cfg = utils.get_config_settings(experiment_name)  # use given filename in graph .yml or default config_timeflux.json
         self.sfreq = None
         self._threshold = 'to_set'
-        self.baseline_sigs = []
+        self.baseline_values = []  # to store the biomarkers for threshold decision
 
-        self.marker_type = self.cfg['biomarker']['type']
-        self.base_duration = self.cfg['biomarker']['baseline_duration_sec']
+        self.marker_cfg = self.cfg['biomarker']
+        
             
         # if self.marker_type == 'ACC':
         #     self.MARKER_FUNC = sig_vector_magn  # define dynamically which MARKER_CALC function to use
@@ -43,25 +44,31 @@ class Compareinput(Node):
         # else:
         #     raise ValueError(f'incorrect input_signal defined')
 
-        print(f'Set threshold for {self.marker_type}'
-              f' is set @ {self._threshold} (sampling at {self.sfreq} Hz)')
+        print(f'...(init) threshold for {self.marker_cfg["type"]} set @ {self._threshold}')
+
+        # Initialise the lsl-stream for raw data
+        markers_streamInfo = StreamInfo(name="biomarker_log",
+                                        type="Markers",
+                                        channel_count=2,
+                                        channel_format="string")
+        self.biomarker_outlet = StreamOutlet(markers_streamInfo)
+        # as first push, send selected channel names for saving
+        t = datetime.now(tz=timezone.utc)
+        self.biomarker_outlet.push_sample([f'biomarker type: {self.marker_cfg["type"]}',
+                                           f'stream outlet init at clock: {str(t)}'])  # include time
         
     
     def update(self):
-        # print(f'\nCOMPARE DATA INPUT is type: {type(self.i.data)}')
-        # print(f'content:\n{self.i.data}')
-
-        #### TODO: give value to single_threshold script and load _threshold in single_threshoöld
-        # autom save threhsold here!
+        
+        # skip when no input
+        if not self.i.ready():
+            return
 
         if not self.sfreq:
             self.sfreq = self.i.meta["rate"]
-            self.base_samples = self.sfreq * self.base_duration
-        
-        # temporary solution for None type input
-        if not self.i.ready():
-            # self.set_default_empty_output()
-            pass
+            # calc n required samples for baseline threshold (1 sample = 1 epoch)
+            self.base_samples = (self.marker_cfg['baseline_duration_sec']
+                                 / self.marker_cfg['epoch_length_sec'])
         
         # recognize threshold to set on string type
         elif self._threshold == 'to_set':
@@ -75,39 +82,57 @@ class Compareinput(Node):
             value = self.i.data.values[:, 0]
             
             # compare calculated input signal (done in aDBS script, e.g., single_threshold)
-            
+            OUTPUT = float(value > self._threshold)
+            print(f'...compare input: {value} vs {self._threshold} -> {OUTPUT}')
+
+            t = datetime.now(tz=timezone.utc)
+            self.biomarker_outlet.push_sample(
+                [f'marker compared: {value}',
+                 f'time: {str(t)}'])  # include time
+
             # sets as pandas DataFrame
-            self.o.set(
-                [[value]],
-                names=['input_value'],
-                timestamps=[datetime.now(tz=timezone.utc)],
-                meta={'rate': self.sfreq, 'threshold': self._threshold}
+            self.o.data = DataFrame(
+                data=[[OUTPUT]],
+                columns=['biomarker_compare',],
+                index=[datetime.now(tz=timezone.utc)]
             )
     
 
     def set_default_empty_output(self):
         input_value = 0
-        output = 0
+        output = -99
         out_index = 0
 
         # sets as pandas DataFrame
         self.o.data = DataFrame(
             data=[[output]],
-            columns=['OUT (aDBS trigger)'],
-            index=[out_index]
+            columns=['biomarker_output'],
+            timestamps=[datetime.now(tz=timezone.utc)],
         )
 
     def define_threshold(self,):
         # add new sample(s)
-        print('... SETTING THRESHOLD ACC')
-        self.baseline_sigs.append([self.i.data.values[0]])
-        
-        if len(self.baseline_sigs) > self.base_samples:
+        self.baseline_values.append([self.i.data.values[0]])
+        print(f'...input shape (def threshold): {self.i.data.values.shape}')
+
+        print(f'...defining THRESHOLD (n baseline values: {len(self.baseline_values)}'
+              f' out of {self.base_samples})')
+
+        if len(self.baseline_values) > self.base_samples:
             
             # calculate baseline  # TODO vary with baselining function
-            self._threshold = np.mean(self.baseline_sigs)
+            self._threshold = np.mean(self.baseline_values)
 
-            self._threshold = np.percentile(self.baseline_sigs, 75)
+            self._threshold = np.percentile(self.baseline_values, 75)
 
             print(f'\n....ACC THRESHOLD SET AT {self._threshold}')
-            # TODO: create LSL stream and markers
+            
+            # send LSL markers
+            t = datetime.now(tz=timezone.utc)
+            self.biomarker_outlet.push_sample(
+                [f'baseline values: {str(self.baseline_values)}',
+                 f'time: {str(t)}'])  # include time
+            t = datetime.now(tz=timezone.utc)
+            self.biomarker_outlet.push_sample(
+                [f'threshold set: {self._threshold}',
+                 f'time: {str(t)}'])

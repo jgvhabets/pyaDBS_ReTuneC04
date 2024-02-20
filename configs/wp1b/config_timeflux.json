@@ -2,11 +2,12 @@
     "rec": {
         "tmsi": {
             "save_via_lsl": true,
+            "LabRec_reminder_sec": 3,
             "use_wallclock_timestamp": true,
             "queue_size": 0,
             "sample_secs_save_lsl": 1,
             "sampling_rate": 1000,
-            "FETCH_FULL_Q": false,
+            "FETCH_FULL_Q": true,
             "MIN_BLOCK_SIZE_msec": 250,
             "recording_channel_types": ["ACC", "LFP", "ECOG", "EMG"],
             "aDBS_channels": ["ACC_L_X"]
@@ -33,8 +34,9 @@
     },
     "biomarker": {
         "type": "power",
-        "freq_range": [65, 85],
-        "baseline_duration_sec": 3
+        "epoch_length_sec": 0.25,
+        "freq_range": [4, 12],
+        "baseline_duration_sec": 10
     },
     "analysis": {
         "mean": {

@@ -3,7 +3,7 @@
 # PM running instructions: 
 #   run from: cd C:\Users\habetsj\Research\projects\aDBS_C04\code\pyaDBS_ReTuneC04
 # or Labor: cd C:\CODE\tasks\pyaDBS_ReTuneC04
-#   cmd: timeflux -d graphs/aDBS/wp1b_dev.yml
+#   cmd: timeflux -d graphs/wp1b/wp1b.yml
 # view at: http://localhost:8000/monitor/
 
 # old notes:
@@ -31,34 +31,34 @@ graphs:
       module: nodes.TMSi.tmsi_sampler
       class: Tmsisampler
       params:
-        experiment_name: "wp1b.json"
+        experiment_name: "wp1b"
 
     # SIGNAL PROCESSING NODES
     - id: biomarker
       module: nodes.analysis.biomarker
       class: Biomarker
       params:
-        experiment_name: "wp1b.json"
+        experiment_name: "wp1b"
 
     # aDBS DECISION MAKING NODES
     - id: compare_biomarker
       module: nodes.aDBS.compare_input
       class: Compareinput
       params:
-        experiment_name: "wp1b.json"
+        experiment_name: "wp1b"
       
     - id: single_threshold
       module: nodes.aDBS.single_threshold
       class: Single_threshold
       params:
-        experiment_name: "wp1b.json"
+        experiment_name: "wp1b"
 
     # Stimulation Nodes
     - id: AO_Stim
       module: nodes.AO.AO_stim_matlab
       class: AO_stim
       params:
-        experiment_name: "wp1b.json"
+        experiment_name: "wp1b"
     
     # INTER GRAPH COMM. PUBLISHING NODES
     - id: Pub_raw_sig
@@ -66,16 +66,16 @@ graphs:
       class: Pub
       params:
         topic: raw_tmsi
-    - id: Pub_biomarker
+    - id: Pub_biomarker_raw
       module: timeflux.nodes.zmq
       class: Pub
       params:
-        topic: biomarker
-    - id: Pub_comp_biomarker
+        topic: biomarker_raw
+    - id: Pub_biomarker_compare
       module: timeflux.nodes.zmq
       class: Pub
       params:
-        topic: comp_marker
+        topic: biomarker_compare
     - id: Pub_aDBS_Thresh
       module: timeflux.nodes.zmq
       class: Pub
@@ -95,23 +95,23 @@ graphs:
         target: biomarker
       - source: biomarker
         target: compare_biomarker
-      - source: compare_biomarker
-        target: single_threshold
-      - source: single_threshold
-        target: AO_Stim
+      # - source: compare_biomarker
+      #   target: single_threshold
+      # - source: single_threshold
+      #   target: AO_Stim
 
 
       # Communication for visualization
       - source: tmsi_sampler
         target: Pub_raw_sig
       - source: biomarker 
-        target: Pub_biomarker
+        target: Pub_biomarker_raw
       - source: compare_biomarker
-        target: Pub_comp_biomarker
-      - source: single_threshold
-        target: Pub_aDBS_Thresh
-      - source: AO_Stim 
-        target: Pub_AO
+        target: Pub_biomarker_compare
+      # - source: single_threshold
+      #   target: Pub_aDBS_Thresh
+      # - source: AO_Stim 
+      #   target: Pub_AO
     
     # Define update rate (times poer second)
     rate: 0  # 0 means as fast as possible
@@ -125,34 +125,48 @@ graphs:
       class: Sub
       params:
         topics: raw_tmsi   #[raw_stn, raw_ecog]  bands_tmsi
-    - id: sub_stim_input
+    - id: sub_biomarker_raw
       module: timeflux.nodes.zmq
       class: Sub
       params:
-        topics: acc_output  # [bands_stn, bands_ecog]
-    - id: sub_stim_output
+        topics: biomarker_raw
+    - id: sub_biomarker_compare
       module: timeflux.nodes.zmq
       class: Sub
       params:
-        topics: AO_Stim_output
+        topics: biomarker_compare
+    # - id: sub_stim_input
+    #   module: timeflux.nodes.zmq
+    #   class: Sub
+    #   params:
+    #     topics: acc_output  # [bands_stn, bands_ecog]
+    # - id: sub_stim_output
+    #   module: timeflux.nodes.zmq
+    #   class: Sub
+    #   params:
+    #     topics: AO_Stim_output
 
     # nodes to visualize collected streams
     - id: monitor
       module: timeflux_ui.nodes.ui
       class: UI
+    
     edges:
       # plot raw tmsi
       - source: sub_raw:raw_tmsi
-        target: monitor:raw_tmsi  # monitor target is not defined before
-      # plot bands of tmsi
-      # - source: sub_bands:bands_tmsi
-      #   target: monitor:bands_tmsi
-      # plot input signal to AO-stim
-      - source: sub_stim_input:acc_output
-        target: monitor:acc_output
-      - source: sub_stim_output:stim_output
-        target: monitor:stim_output
-      - source: sub_stim_output:AO_Stim_output
-        target: monitor:AO_Stim_output
+        target: monitor:raw_tmsi
+      # plot biomarker (raw and compared)
+      - source: sub_biomarker_raw:biomarker_raw
+        target: monitor:biomarker_raw
+      - source: sub_biomarker_compare:biomarker_compare
+        target: monitor:biomarker_compare
+
+      # # plot input signal to AO-stim
+      # - source: sub_stim_input:acc_output
+      #   target: monitor:acc_output
+      # - source: sub_stim_output:stim_output
+      #   target: monitor:stim_output
+      # - source: sub_stim_output:AO_Stim_output
+      #   target: monitor:AO_Stim_output
 
     rate: 0
