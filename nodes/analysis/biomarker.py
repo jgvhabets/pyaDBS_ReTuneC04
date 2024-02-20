@@ -19,7 +19,7 @@ import utils.utils as utils
 class Biomarker(Node):
     def __init__(
         self,
-        config_filename='config.json',
+        experiment_name='',
         sfreq=None,
         seg_len_sec=.25,
     ):
@@ -27,14 +27,14 @@ class Biomarker(Node):
         self.seg_len_sec = seg_len_sec
 
         # load configurations
-        self.marker_cfg = utils.get_config_settings(config_filename)['biomarker']
+        self.marker_cfg = utils.get_config_settings(experiment_name)['biomarker']
 
         # check correctness of given coh_metric
         self.metric = self.marker_cfg['type']
         allowed_metrics = ['power', 'coh', 'squared_coh',
                            'icoh', 'abs_icoh' ]
         assert self.metric in allowed_metrics, (
-            f'biomarker type (from: {config_filename}) '
+            f'biomarker type (from: {experiment_name}) '
             f'not in {allowed_metrics}'
         )
         

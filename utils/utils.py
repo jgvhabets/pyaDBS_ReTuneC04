@@ -1,13 +1,14 @@
 import json
 import pandas as pd
 import numpy as np
+import os
 
 
 def get_config_settings(
-    json_filename: str = 'config.json',
+    experiment_name: str = '/configs/config_timeflux.json',
 ):
     # load configuration 
-    with open(json_filename, 'r') as file:
+    with open(os.path.join("configs", experiment_name, "config_timeflux.json"), 'r') as file:
         cfg = json.load(file)
 
     return cfg

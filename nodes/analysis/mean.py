@@ -15,10 +15,10 @@ class Mean(Node):
         o (Port): Default output, provides DataFrame.
     """
 
-    def __init__(self, config_filename='config.json', config_field="mean"):
+    def __init__(self, experiment_name='', config_field="mean"):
 
         # load configurations
-        self.cfg = utils.get_config_settings(config_filename)
+        self.cfg = utils.get_config_settings(experiment_name)
         self.recording_channels = self.cfg['rec']['tmsi']['aDBS_channels']
 
         # initialize output class

@@ -75,7 +75,7 @@ def channel_selection(self):
 
     Arguments:
         - based on 'recording_channel_types' and 
-            'aDBS_channels' in tmsi-settings, config.json.
+            'aDBS_channels' in tmsi-settings, config_timeflux.json.
             channeltypes in list have to be the type-
             codes in the TMSI channel naming
     

@@ -13,33 +13,33 @@ graphs:
       module: nodes.TMSi.tmsi_sampler
       class: Tmsisampler
       params:
-        config_filename: "config_wp1a.json"
+        experiment_name: "adbs_stimdur"
     # Epoch node: Epoch raw data in junks of the same length
     - id: EpochRaw
       module: nodes.data_flow.epoch
       class: Epoch
       params:
-        config_filename: "config_wp1a.json"
+        experiment_name: "adbs_stimdur"
         config_field: "epoch_raw"
     # Signal processing node: Compute biomarker
     - id: Power
       module: nodes.analysis.power
       class: Power
       params:
-        config_filename: "config_wp1a.json"
+        experiment_name: "adbs_stimdur"
     # Epoch node: Create junks of power estimates
     - id: EpochPower
       module: nodes.data_flow.epoch
       class: Epoch
       params:
-        config_filename: "config_wp1a.json"
+        experiment_name: "adbs_stimdur"
         config_field: "epoch_power"
     # Mean node: Average over junks of power estimates
     - id: Mean
       module: nodes.analysis.mean
       class: Mean
       params:
-        config_filename: "config_wp1a.json"
+        experiment_name: "adbs_stimdur"
         config_field: "mean"
     # Output nodes: LSL node sending data to LSL stream
     - id: LSL_Saga
@@ -93,13 +93,13 @@ graphs:
       module: nodes.aDBS.single_threshold
       class: Single_threshold
       params:
-        config_filename: "config_wp1a.json"
+        experiment_name: "adbs_stimdur"
     # Stimulator node: Controls stim params on neuroomega
     - id: Stimulator
       module: nodes.AO.AO_stim_matlab
       class: AO_stim
       params:
-        config_filename: "config_wp1a.json"
+        experiment_name: "adbs_stimdur"
      # Output nodes: LSL node sending data to LSL stream
     - id: LSL_StimParams
       module: nodes.data_flow.lsl

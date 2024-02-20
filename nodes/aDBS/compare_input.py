@@ -23,11 +23,11 @@ class Compareinput(Node):
     """
     def __init__(
         self,
-        config_filename='config.json',
+        experiment_name='',
         sfreq=None,
     ):
         ### load configurations
-        self.cfg = utils.get_config_settings(config_filename)  # use given filename in graph .yml or default config.json
+        self.cfg = utils.get_config_settings(experiment_name)  # use given filename in graph .yml or default config_timeflux.json
         self.sfreq = None
         self._threshold = 'to_set'
         self.baseline_sigs = []

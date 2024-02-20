@@ -27,10 +27,10 @@ class Tmsisampler(Node):
     """
     Class to connect and sample TMSi SAGA data.
     """
-    def __init__(self, config_filename='config.json'):
+    def __init__(self, experiment_name=''):
         
         ### Load configurations
-        self.cfg = utils.get_config_settings(config_filename)  # use given filename in graph .yml or default config.json
+        self.cfg = utils.get_config_settings(experiment_name)  # use given filename in graph .yml or default config_timeflux.json
         self.tmsi_settings = self.cfg["rec"]["tmsi"]
 
         ### Initialise and Connect TMSi

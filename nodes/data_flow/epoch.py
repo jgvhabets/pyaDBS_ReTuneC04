@@ -15,10 +15,10 @@ class Epoch(Node):
         o (Port): Default output, provides DataFrame.
     """
 
-    def __init__(self, config_filename='config.json', config_field="epoch"):
+    def __init__(self, experiment_name='', config_field="epoch"):
 
         # load configuration
-        cfg = utils.get_config_settings(config_filename)
+        cfg = utils.get_config_settings(experiment_name)
         self.recording_channels = cfg['rec']['tmsi']['aDBS_channels']
         self.cfg_epoch = cfg['data_flow'][config_field]
         self._win_size = utils.convert_time_samples(freq=self.cfg_epoch["rate_in"], time=self.cfg_epoch["window_duration"])

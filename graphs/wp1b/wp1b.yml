@@ -31,34 +31,34 @@ graphs:
       module: nodes.TMSi.tmsi_sampler
       class: Tmsisampler
       params:
-        config_filename: "config_wp1b.json"
+        experiment_name: "wp1b.json"
 
     # SIGNAL PROCESSING NODES
     - id: biomarker
       module: nodes.analysis.biomarker
       class: Biomarker
       params:
-        config_filename: "config_wp1b.json"
+        experiment_name: "wp1b.json"
 
     # aDBS DECISION MAKING NODES
     - id: compare_biomarker
       module: nodes.aDBS.compare_input
       class: Compareinput
       params:
-        config_filename: "config_wp1b.json"
+        experiment_name: "wp1b.json"
       
     - id: single_threshold
       module: nodes.aDBS.single_threshold
       class: Single_threshold
       params:
-        config_filename: "config_wp1b.json"
+        experiment_name: "wp1b.json"
 
     # Stimulation Nodes
     - id: AO_Stim
       module: nodes.AO.AO_stim_matlab
       class: AO_stim
       params:
-        config_filename: "config_wp1b.json"
+        experiment_name: "wp1b.json"
     
     # INTER GRAPH COMM. PUBLISHING NODES
     - id: Pub_raw_sig
