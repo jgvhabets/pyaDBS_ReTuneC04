@@ -18,14 +18,13 @@ timeflux, py-newronika interface, and py-TMSi interface.
   - timeflux_dsp
 
 - for TMSi functions:
-  - `pip install pyserial`
-  - `pip install PySide2`
-  - `pip install pyqtgraph`
-  - `pip install pyxdf`
-  - `pip install EDFlib`
   - Download or clone <a href="https://gitlab.com/tmsi/tmsi-python-interface">TMSi Python Interface from GitLab</a>
     in `REPO\packages\`
-
+  - Navigate to `REPO\packages\` and call 'pip install -r .\requirements39_Windows.txt'
+  - `pip install EDFlib`
+  - TMSi Saga interface lets the sampling function sleep for ~60ms per data chunk retrieval. This slows down real-time processing. To overcome, change the following lines in `REPO\packages\tmsi-python-interface\TMSiSDK\devices\saga\saga_device.py`:
+    1024: time.sleep(0.050) -> time.sleep(0.001)
+    1130: time.sleep(0.010) -> time.sleep(0.001)
 
 - for AlphaOmega:
   - succesfully install matlabengine before installing neuroomega_matlab (!), see next heading
@@ -38,6 +37,8 @@ timeflux, py-newronika interface, and py-TMSi interface.
 - for matlabengine
   - for MATLAB version R2021b: pip install matlabengine==9.11.21
   
+- for session setup:
+  - `pip install mne-bids`
 
 
 ### Important Notes
