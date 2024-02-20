@@ -1,0 +1,63 @@
+{
+    "rec": {
+        "tmsi": {
+            "save_via_lsl": true,
+            "use_wallclock_timestamp": true,
+            "queue_size": 0,
+            "sample_secs_save_lsl": 1,
+            "sampling_rate": 1000,
+            "FETCH_FULL_Q": false,
+            "MIN_BLOCK_SIZE_msec": 250,
+            "recording_channel_types": ["ACC", "LFP", "ECOG", "EMG"],
+            "aDBS_channels": ["ACC_L_X"]
+        }
+    },
+    "CONNECT_NEUROOMEGA": false,
+    "stim": {
+        "rate": 20,
+        "detection_blank_period": 15,
+        "onset_period": 5,
+        "termination_period": 5,
+        "ramp_period": 10,
+        "threshold": 0.5,
+        "stim_amp_low": 0,
+        "stim_amp_high": 2,
+        "stim_amp_param": "STIM_AMP_RIGHT",
+        "stim_params": {
+            "STIM_DURATION": 100,
+            "STIM_AMP_LEFT": 0,
+            "STIM_FREQ_LEFT": 1,
+            "STIM_AMP_RIGHT": 0,
+            "STIM_FREQ_RIGHT": 1
+        }
+    },
+    "biomarker": {
+        "type": "power",
+        "freq_range": [65, 85],
+        "baseline_duration_sec": 3
+    },
+    "analysis": {
+        "mean": {
+            "rate": 20 
+        },
+        "power": {
+            "rate": 20,
+            "f_band_min": 4,
+            "f_band_max": 6
+        }
+    },
+    "data_flow": {
+        "epoch_raw": {
+            "rate_in": 1000,
+            "rate_out": 20,
+            "step_duration": 0.05,
+            "window_duration": 2
+        },
+        "epoch_power": {
+            "rate_in": 20,
+            "rate_out": 20,
+            "step_duration": 0.05,
+            "window_duration": 10
+        }
+    }
+}
