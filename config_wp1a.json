@@ -8,8 +8,8 @@
             "sampling_rate": 1000,
             "FETCH_FULL_Q": true,
             "MIN_BLOCK_SIZE_msec": [],
-            "recording_channel_types": ["X"],
-            "aDBS_channels": ["X"]
+            "recording_channel_types": ["ACC"],
+            "aDBS_channels": ["ACC_R_X"]
         }
     },
     "analysis": {
@@ -27,32 +27,32 @@
             "rate_in": 1000,
             "rate_out": 20,
             "step_duration": 0.05,
-            "window_duration": 2
+            "window_duration": 1
         },
         "epoch_power": {
             "rate_in": 20,
             "rate_out": 20,
             "step_duration": 0.05,
-            "window_duration": 10
+            "window_duration": 0.5
         }
     },
-    "CONNECT_NEUROOMEGA": false,
+    "CONNECT_NEUROOMEGA": true,
     "stim": {
         "rate": 20,
         "detection_blank_period": 5,
         "onset_period": 3,
         "termination_period": 3,
-        "ramp_period": 1,
-        "threshold": 0.5,
+        "ramp_period": 2,
+        "threshold": 0.0005,
         "stim_amp_low": 0,
-        "stim_amp_high": 2,
+        "stim_amp_high": 0.5,
         "stim_amp_param": "STIM_AMP_RIGHT",
         "stim_params": {
-            "STIM_DURATION": 100,
+            "STIM_DURATION": 1000,
             "STIM_AMP_LEFT": 0,
-            "STIM_FREQ_LEFT": 1,
+            "STIM_FREQ_LEFT": 130,
             "STIM_AMP_RIGHT": 0,
-            "STIM_FREQ_RIGHT": 1
+            "STIM_FREQ_RIGHT": 130
         }
     }
 }

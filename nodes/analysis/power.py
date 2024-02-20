@@ -31,6 +31,8 @@ class Power(Node):
         # Make sure input data is available
         if self.i.ready():
 
+            # print(f'power -- data input at: {local_clock()}')
+
             # Extract data
             data, package_id = utils.extract_data(self.i)
 
@@ -61,3 +63,5 @@ class Power(Node):
             self.o.data, self.o.meta  = self.out.set(samples=mean_psd,
                                                      timestamp_received=timestamp_received,
                                                      package_id=package_id)
+
+            # print(f'power -- sent from power at: {local_clock()}, package number {self.o.data["package_numbers"].iat[0]}, package id {self.o.data["package_ids"].iat[0]}')

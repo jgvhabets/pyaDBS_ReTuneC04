@@ -39,6 +39,9 @@ class AO_stim(Node):
         # get configuration settings
         self.cfg = utils.get_config_settings(config_filename)
 
+        # set initial stimulation parameters
+        self.stim_params = pd.DataFrame(self.cfg['stim']['stim_params'], index=[0])
+
         # connect to AO
         if self.cfg['CONNECT_NEUROOMEGA']:
             self.no_engine = connect_AO(AO_connection=AO_connection,
@@ -47,13 +50,19 @@ class AO_stim(Node):
             # test stim start and stop
             apply_and_stop_test_stim(self.no_engine)
 
+            # start stimulation with default parameters
+            self.no_engine.AO_DefaultStimulation(
+                            float(self.stim_params['STIM_FREQ_RIGHT'].iat[0]),
+                            float(self.stim_params['STIM_AMP_RIGHT'].iat[0]),
+                            float(self.stim_params['STIM_FREQ_LEFT'].iat[0]),
+                            float(self.stim_params['STIM_AMP_LEFT'].iat[0]),
+                            float(self.stim_params['STIM_DURATION'].iat[0])
+                        )
+
             self.NO_CONNECTED = True
 
         else:
             print('\n### Neuro-Omega not connected (according to configs.json)')
-
-        # set initial stimulation parameters
-        self.stim_params = pd.DataFrame(self.cfg['stim']['stim_params'], index=[0])
 
         # initialize output class
         self.out = utils.output(rate=self.cfg['analysis']['mean']['rate'], 
@@ -79,11 +88,11 @@ class AO_stim(Node):
                 if self.NO_CONNECTED:
 
                         self.no_engine.AO_DefaultStimulation(
-                            self.stim_params['STIM_FREQ_RIGHT'],
-                            self.stim_params['STIM_AMP_RIGHT'],
-                            self.stim_params['STIM_FREQ_LEFT'],
-                            self.stim_params['STIM_AMP_LEFT'],
-                            self.stim_params['STIM_DURATION']
+                            float(self.stim_params['STIM_FREQ_RIGHT'].iat[0]),
+                            float(self.stim_params['STIM_AMP_RIGHT'].iat[0]),
+                            float(self.stim_params['STIM_FREQ_LEFT'].iat[0]),
+                            float(self.stim_params['STIM_AMP_LEFT'].iat[0]),
+                            float(self.stim_params['STIM_DURATION'].iat[0])
                         )  # always keep this order corr to DefaultStimulation function
             
                 elif not self.NO_CONNECTED:
@@ -101,10 +110,12 @@ class AO_stim(Node):
             # print(f'AO_stim_matlab -- sent from AO_stim_matlab at: {local_clock()}, package number {self.o.data["package_numbers"].iat[0]}, package id {self.o.data["package_ids"].iat[0]}')
         
 
-    def close(self):
+    def terminate(self):
         
-        closed = self.no_engine.AO_CloseConnection()
-        print('closed NeuroOmega connection')
+        self.no_engine.AO_DefaultStopStimulation()
+        print('\t...stopped stimulation on NeuroOmega...')
+        self.no_engine.AO_CloseConnection()
+        print('\t...closed NeuroOmega connection...')
 
     def has_new_stim_params(self, current_stim_params, incoming_stim_params):
         
