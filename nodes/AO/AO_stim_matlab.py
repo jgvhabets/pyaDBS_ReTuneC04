@@ -112,10 +112,11 @@ class AO_stim(Node):
 
     def terminate(self):
         
-        self.no_engine.AO_DefaultStopStimulation()
-        print('\t...stopped stimulation on NeuroOmega...')
-        self.no_engine.AO_CloseConnection()
-        print('\t...closed NeuroOmega connection...')
+        if self.NO_CONNECTED:
+            self.no_engine.AO_DefaultStopStimulation()
+            print('\t...stopped stimulation on NeuroOmega...')
+            self.no_engine.AO_CloseConnection()
+            print('\t...closed NeuroOmega connection...')
 
     def has_new_stim_params(self, current_stim_params, incoming_stim_params):
         
