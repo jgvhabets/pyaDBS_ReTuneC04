@@ -9,7 +9,7 @@ timeflux, py-newronika interface, and py-TMSi interface.
 - Advised env to create:
   `conda create --name aDBS python=3.9 jupyter pandas scipy numpy matplotlib h5py pytables bottleneck`
 - Packages to install:
-  - `pip install pylsl=1.16.2`
+  - `pip install pylsl==1.16.2`
   - `pip install timeflux`
   - `pip install serial`
 
