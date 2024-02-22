@@ -12,6 +12,7 @@ timeflux, py-newronika interface, and py-TMSi interface.
   - `pip install pylsl==1.16.2`
   - `pip install timeflux`
   - `pip install serial`
+  - `pip install mnelab`
 
 - timeflux plugins installed
   - timeflux_example
