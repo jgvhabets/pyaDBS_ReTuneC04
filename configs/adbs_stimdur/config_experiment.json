@@ -36,7 +36,7 @@
             "window_duration": 0.5
         }
     },
-    "CONNECT_NEUROOMEGA": true,
+    "CONNECT_NEUROOMEGA": false,
     "stim": {
         "rate": 20,
         "detection_blank_period": 5,
@@ -50,9 +50,9 @@
         "stim_params": {
             "STIM_DURATION": 1000,
             "STIM_AMP_LEFT": 0,
-            "STIM_FREQ_LEFT": 130,
+            "STIM_FREQ_LEFT": 125,
             "STIM_AMP_RIGHT": 0,
-            "STIM_FREQ_RIGHT": 130
+            "STIM_FREQ_RIGHT": 125
         }
     }
 }

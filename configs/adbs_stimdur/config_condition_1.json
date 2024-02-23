@@ -1,0 +1,8 @@
+{
+    "stim": {
+        "detection_blank_period": 5,
+        "onset_period": 3,
+        "termination_period": 3,
+        "ramp_period": 2
+    }
+}

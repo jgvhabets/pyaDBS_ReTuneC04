@@ -1,0 +1,10 @@
+{
+    "reference_scheme_actual": {
+        "anode": ["LFPR1", "LFPR234", "LFPL1", "LFPL234"],
+        "cathode": ["LFPR567", "LFPR8", "LFPL567", "LFPL8"]
+    },
+    "reference_scheme": {
+        "anode": ["X-1", "X-1", "Y-1"],
+        "cathode": ["Y-1", "Z-1", "Z-1"]
+    }
+}
