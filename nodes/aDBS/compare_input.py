@@ -25,10 +25,10 @@ class Compareinput(Node):
     """
     def __init__(
         self,
-        experiment_name='',
+        config_path='',
     ):
         ### load configurations
-        self.cfg = utils.get_config_settings(experiment_name)  # use given filename in graph .yml or default config_timeflux.json
+        self.cfg = utils.get_config_settings(config_path)  # use given filename in graph .yml or default config_timeflux.json
         self.sfreq = None
         self._threshold = 'to_set'
         self.baseline_values = []  # to store the biomarkers for threshold decision

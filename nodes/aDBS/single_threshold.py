@@ -13,10 +13,10 @@ class Single_threshold(Node):
         i (Port): Default input, expects DataFrame.
         o (Port): Default output, provides DataFrame.
     """
-    def __init__(self, experiment_name=''):
+    def __init__(self, config_path=''):
 
         # load configuration 
-        self.cfg = utils.get_config_settings(experiment_name)
+        self.cfg = utils.get_config_settings(config_path)
         self.stim_cfg = self.cfg['stim']
         self.stim_params = pd.DataFrame(self.cfg['stim']['stim_params'], index=[0])
         self.rate = self.stim_cfg['rate']

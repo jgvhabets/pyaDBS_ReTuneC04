@@ -12,10 +12,10 @@ from pylsl import local_clock
 
 class Power(Node):
     
-    def __init__(self, experiment_name=''):
+    def __init__(self, config_path=''):
         
         # load configuration
-        self.cfg = utils.get_config_settings(experiment_name)
+        self.cfg = utils.get_config_settings(config_path)
         self.power_cfg = self.cfg["analysis"]["power"]
 
         # set parameters for power calculation        

@@ -31,13 +31,13 @@ class AO_stim(Node):
         self, macNO = 'F4:5E:AB:6B:6D:A1',
         AO_connection: str = 'matlab',
         NO_CONNECTED: bool = False,
-        experiment_name=''
+        config_path=''
     ):
         # default start in false
         self.NO_CONNECTED = NO_CONNECTED
         
         # get configuration settings
-        self.cfg = utils.get_config_settings(experiment_name)
+        self.cfg = utils.get_config_settings(config_path)
 
         # set initial stimulation parameters
         self.stim_params = pd.DataFrame(self.cfg['stim']['stim_params'], index=[0])

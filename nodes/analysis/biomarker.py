@@ -19,11 +19,11 @@ import utils.utils as utils
 class Biomarker(Node):
     def __init__(
         self,
-        experiment_name='',
+        config_path='',
     ):
         # load configurations
-        self.marker_cfg = utils.get_config_settings(experiment_name)['biomarker']
-        self.tmsi_cfg = utils.get_config_settings(experiment_name)['rec']['tmsi']
+        self.marker_cfg = utils.get_config_settings(config_path)['biomarker']
+        self.tmsi_cfg = utils.get_config_settings(config_path)['rec']['tmsi']
 
         self.sfreq = None
         # self.sfreq = self.tmsi_cfg['sampling_rate']  # take sample rate from input at first update
@@ -33,7 +33,7 @@ class Biomarker(Node):
         allowed_metrics = ['power', 'coh', 'squared_coh',
                            'icoh', 'abs_icoh' ]
         assert self.metric in allowed_metrics, (
-            f'biomarker type (from: {experiment_name}) '
+            f'biomarker type (from: {config_path}) '
             f'not in {allowed_metrics}'
         )
         

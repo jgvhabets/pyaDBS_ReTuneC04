@@ -6,6 +6,7 @@ import os
 
 def get_config_settings(
     folder_filename: str = '/configs/config_timeflux.json',
+    configs_folder = "configs"
 ):
     """
     Arguments:
@@ -13,20 +14,22 @@ def get_config_settings(
             with folder and filename, including .json extension
             If not .json filename is given, this is interpret as
             the foldername wherein a default config_timeflux.json
-            file is located 
+            file is located
+        - configs_folder: optionally, define a base folder for 
+            all configs. If not set, defaults to REPO/configs
     """
     # load configuration
     if folder_filename.endswith('.json'):
-        with open(os.path.join("configs", folder_filename), 'r') as file:
+        with open(os.path.join(configs_folder, folder_filename), 'r') as file:
             cfg = json.load(file)
     
     
     if not folder_filename.endswith('.json') and len(folder_filename) > 0:
-        with open(os.path.join("configs", folder_filename, "config_timeflux.json"), 'r') as file:
+        with open(os.path.join(configs_folder, folder_filename, "config_timeflux.json"), 'r') as file:
             cfg = json.load(file)
 
     else:
-        with open(os.path.join("configs", "config_timeflux.json"), 'r') as file:
+        with open(os.path.join(configs_folder, "config_timeflux.json"), 'r') as file:
             cfg = json.load(file)
 
 
