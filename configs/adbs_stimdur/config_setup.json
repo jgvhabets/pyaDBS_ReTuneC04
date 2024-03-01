@@ -5,6 +5,7 @@
     },
     "reference_scheme": {
         "anode": ["X-1", "X-1", "Y-1"],
-        "cathode": ["Y-1", "Z-1", "Z-1"]
+        "cathode": ["Y-1", "Z-1", "Z-1"],
+        "ch_name": ["X-1-Y-1", "X-1-Z-1", "Y-1-Z-1"]
     }
 }

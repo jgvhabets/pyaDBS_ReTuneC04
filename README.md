@@ -13,6 +13,7 @@ timeflux, py-newronika interface, and py-TMSi interface.
   - `pip install timeflux`
   - `pip install serial`
   - `pip install ipympl`
+  - `pip install deepmerge`
 
 - timeflux plugins installed
   - timeflux_example

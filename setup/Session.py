@@ -6,6 +6,7 @@ from TMSiSDK import tmsi_device
 from TMSiSDK.device import DeviceInterfaceType
 from TMSiFileFormats.file_readers.xdf_reader import Xdf_Reader
 from setup.saga_recorder import saga_recorder
+from setup.run_timeflux import run_timeflux
 from glob import glob
 import mne
 import json
@@ -13,6 +14,9 @@ from utils.utils import convert_time_samples
 import matplotlib.pyplot as plt
 from matplotlib.cm import get_cmap
 import numpy as np
+from deepmerge import always_merger
+from copy import deepcopy
+from pathlib import Path
 
 
 class Session():
@@ -28,7 +32,7 @@ class Session():
         self.medication_state = medication_state
         self.session_id = session_id
 
-        print(f"\nSession object initialized with params:")
+        print(f"\nSession object initialized with the following parameters:")
         print(f"experiment_name = {experiment_name}")
         print(f"patient_id = {patient_id}")
         print(f"medication_state = {medication_state}")
@@ -39,6 +43,9 @@ class Session():
 
         # set directory
         self._set_directory()
+
+        # load setup config
+        self._load_setup_config()
 
     def set_saga_configuration(self):
 
@@ -87,17 +94,14 @@ class Session():
     def record_calibration_data(self, calibration_run_index):
 
         # get filename for calibration data
-        self._get_calibration_save_path(calibration_run_index)
+        calibration_save_path = self._get_save_path("calibration", calibration_run_index)
 
         # check if file was already created before. If yes, query whether user wants to proceed and write file with same run index or to change run index
-        if glob(os.path.join(
-            self.calibration_save_path.directory,
-            self.calibration_save_path.basename + "*.xdf" # account for TMSi adding date and time to the filename
-            )):
-            print(f"\n{self.calibration_save_path.basename} was already created before.")
+        if os.path.exists(calibration_save_path):
+            print(f"\n{os.path.basename(calibration_save_path)} was already created before.")
 
             while True:
-                answer = input("Do you want to record to a file with the same calibration_run_index? (y/n)")
+                answer = input("Do you want to overwrite the file? (y/n)")
 
                 if answer in ("y", "n"):
 
@@ -116,72 +120,49 @@ class Session():
             print("\nRecording will be started.")            
 
         # record calibration data
-        saga_recorder(self.calibration_save_path)
+        saga_recorder(calibration_save_path)
 
-    def load_calibration_data(self, calibration_run_index):
-
-        # get filename for calibration data
-        self._get_calibration_save_path(calibration_run_index)
-
-        # get files matching calibration save path accounting for timestamps added to filename by TMSi
-        calibration_save_path_all = glob(os.path.join(
-            self.calibration_save_path.directory,
-            self.calibration_save_path.basename + "*.xdf" # account for TMSi adding date and time to the filename
-            ))
-
-        # check if more than one file exists with given calibration_run_index. If yes, query which file to load.
-        if len(calibration_save_path_all) == 0:
-            print("\nNo calibration file exists with this calibration_run_index. Record calibration data before loading.")
-
-        if len(calibration_save_path_all) == 1:
-            self.calibration_save_path = calibration_save_path_all[0]
-            print(f"\n{self.calibration_save_path} will be loaded.")
-
-        elif len(calibration_save_path_all) > 1:
-            print("\nMore than one calibration file exists with this calibration_run_index:")
-            for idx, path in enumerate(calibration_save_path_all):
-                print(f"File index: {idx}: {path}")
-
-            while True:
-                file_idx = int(input("Which file do you want to load? (file index)"))
-
-                try:
-                    self.calibration_save_path = calibration_save_path_all[file_idx]
-                    print(f"\n{self.calibration_save_path} will be loaded.")
-                    break
-
-                except:
-                    print("File index provided is incorrect. Provide the integer following File index.")
-
-        # load data to mne raw object
-        reader = Xdf_Reader(filename=self.calibration_save_path)
-        self.calibration_data = reader.data[0]
-
-    def compute_spectra(self):
-     
-        # Load directory of session config
-        config_filename = os.path.join("configs", self.experiment_name, "config_session.json")
-        assert os.path.exists(config_filename), f"\n{config_filename} does not exist.\n"
-        with open(config_filename, 'r') as file:
-            session_config = json.load(file)
+        # load data after recording finished
+        calibration_save_path_tmsi = glob(str(calibration_save_path)+"*.xdf")
+        reader = Xdf_Reader(filename=calibration_save_path_tmsi[0])
+        calibration_data = reader.data[0]
 
         # Rereference the signals according to the referencing scheme in the session config
-        self.calibration_data_reref = mne.set_bipolar_reference(
-            self.calibration_data,
-            anode=session_config["reference_scheme"]["anode"],
-            cathode=session_config["reference_scheme"]["cathode"])
-        self.calibration_data_reref.drop_channels(self.calibration_data.info.ch_names, on_missing='ignore')
+        calibration_data_reref = mne.set_bipolar_reference(
+            calibration_data,
+            anode=self.setup_config["reference_scheme"]["anode"],
+            cathode=self.setup_config["reference_scheme"]["cathode"],
+            ch_name=self.setup_config["reference_scheme"]["ch_name"],
+            drop_refs=False
+            )
         
+        # save mne raw data
+        calibration_data_reref.save(
+            calibration_save_path,
+            overwrite=True
+            )
+
+        # remove tmsi xdf data
+        os.remove(calibration_save_path_tmsi[0])
+           
+    def compute_spectra(self, calibration_run_index): 
+        
+        # load calibration data
+        self._load_calibration_data(calibration_run_index)
+        
+        # select rereferenced channels
+        self.calibration_data.pick(self.setup_config["reference_scheme"]["ch_name"])
+
         # Select last 10 seconds of data. If less than 10 seconds recorded, use all data
-        tmax = self.calibration_data_reref.times[-1]
+        tmax = self.calibration_data.times[-1]
         tmin = tmax - 10
         if tmin > 0:
-            self.calibration_data_reref.crop(tmin=tmin, tmax=tmax)
+            self.calibration_data.crop(tmin=tmin, tmax=tmax)
 
         # Transform to epoch object. Epoch data to a single epoch just to enable usage tfr functions later on as these don't work on Raw objects.
         self.calibration_data_epochs = mne.make_fixed_length_epochs(
-            raw=self.calibration_data_reref,
-            duration=self.calibration_data_reref.tmax, 
+            raw=self.calibration_data,
+            duration=self.calibration_data.tmax, 
             overlap=0)
 
         # Compute welch psd
@@ -229,7 +210,62 @@ class Session():
             title="auto",
             vmin = 0,
             vmax = np.percentile(self.calibration_data_tfr.data, 98),
-            show=False) # plot psd       
+            show=False); # plot psd       
+
+    def finalize_configuration(self, calibration_run_index, adbs_channel, max_stim_amp):
+
+        # get path to experiment configuration and load it if existing
+        config_experiment_path = os.path.join("configs", self.experiment_name, "config_experiment.json")
+        if config_experiment_path:
+            with open(config_experiment_path, 'r') as file:
+                    config_experiment_template = json.load(file)
+        else:
+            print(f"{config_experiment_path} does not exist. Provide an experiment configuration.")
+
+        # get paths to condition configurations
+        config_condition_paths = glob(os.path.join("configs", self.experiment_name, "config_condition_*.json"))
+
+        # check whether paths exist
+        if config_condition_paths:
+
+            # if paths exist, loop over these
+            for path in config_condition_paths:
+
+                # load config
+                with open(path, 'r') as file:
+                    config_condition = json.load(file)
+
+                # merge experiment and condition config, make deepcopy beforehand as merge is destructive to first argument 
+                # of always_merger
+                config_session = deepcopy(config_experiment_template)
+                always_merger.merge(config_session, config_condition)
+
+                # add session configuration fields
+                config_session["cal"] = {"path": str(self._get_save_path("calibration", calibration_run_index))}
+                config_session["rec"]["tmsi"]["aDBS_channels"] = [adbs_channel]
+                config_session["stim"]["stim_amp_high"] = max_stim_amp
+
+                # create path to session config
+                config_session_save_path = self._get_save_path(config_session["condition_name"], calibration_run_index)
+
+                # save config in session folder
+                with open(config_session_save_path, 'w') as file:
+                    json.dump(config_session, file, indent=2)
+
+                # run timeflux calibration with this configuration to compute real-time power
+                try:
+                    run_timeflux(
+                        path_graph=os.path.join("graphs", self.experiment_name, self.experiment_name + "_calibration.yml"),
+                        path_config=str(config_session_save_path)
+                        )
+                except SystemExit as e:
+                    if e.code == 0:
+                        print("continuing with threshold estimation etc")
+                    else:
+                        raise
+
+        else:
+            print(f"No configurations matching {config_condition_paths}. Provide an condition configurations.")
 
     def _set_directory(self):
 
@@ -268,11 +304,44 @@ class Session():
         for idx, ch in enumerate(self.dev.channels):
             print('[{0}] : [{1}] in [{2}]'.format(idx, ch.name, ch.unit_name))
 
-    def _get_calibration_save_path(self, calibration_run_index):
-        
-        self.calibration_save_path = self.save_path.copy().update(
-            task="calibration",
+    def _get_save_path(self, task, calibration_run_index):
+       
+        # set extension based on type of data to be saved
+        if task == "calibration":
+            extension = ".fif"
+        else:
+            extension = ".json"
+
+        # update BIDSpath object of save path to account fo data specific fields
+        bidspath = self.save_path.copy().update(
+            task=task,
             run=calibration_run_index,
-            extension=".xdf",
+            suffix="ieeg",
+            extension=extension,
             check=False
             )
+        
+        save_path = bidspath.fpath
+
+        return save_path
+        
+    def _load_setup_config(self):
+        config_filename = os.path.join("configs", self.experiment_name, "config_setup.json")
+        assert os.path.exists(config_filename), f"\n{config_filename} does not exist.\n"
+        with open(config_filename, 'r') as file:
+            self.setup_config = json.load(file)     
+    
+    def _load_calibration_data(self, calibration_run_index):
+
+        # get filename for calibration data
+        calibration_save_path = self._get_save_path("calibration", calibration_run_index)
+
+        # check if file exists with given calibration_run_index. If it exists, load it.
+        if not os.path.exists(calibration_save_path):
+            print("\nNo calibration file exists with this calibration_run_index. Record calibration data before loading.")
+            return
+
+        else:
+            print(f"\n{calibration_save_path} will be loaded.")
+            # load data to mne raw object
+            self.calibration_data = mne.io.read_raw(fname=calibration_save_path)

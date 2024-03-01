@@ -1,0 +1,66 @@
+# timeflux example using LSL as central data hub without connected neuroomega
+# run as: timeflux -d -e TIMEFLUX_HOOK_PRE=aDBS_init graphs/aDBS/test_without_neuroomega.yml
+# view at: http://localhost:8000/monitor/
+
+graphs:
+
+  # Signal processing graph: Fetches samples and computes biomarkers
+  - id: SignalProcessing
+    # NODES ------------------------------
+    nodes:
+    # Data import node: Imports data from file
+    - id: DataImport
+      module: nodes.dummy.data_import
+      class: Data_import
+      params:
+        config_path: {{ CONFIG_PATH }}
+    # Epoch node: Epoch raw data in junks of the same length
+    - id: EpochRaw
+      module: nodes.data_flow.epoch
+      class: Epoch
+      params:
+        config_path: {{ CONFIG_PATH }}
+        config_field: "epoch_raw"
+    # Signal processing node: Compute biomarker
+    - id: Power
+      module: nodes.analysis.power
+      class: Power
+      params:
+        config_path: {{ CONFIG_PATH }}
+    # Epoch node: Create junks of power estimates
+    - id: EpochPower
+      module: nodes.data_flow.epoch
+      class: Epoch
+      params:
+        config_path: {{ CONFIG_PATH }}
+        config_field: "epoch_power"
+    # Mean node: Average over junks of power estimates
+    - id: Mean
+      module: nodes.analysis.mean
+      class: Mean
+      params:
+        config_path: {{ CONFIG_PATH }}
+        config_field: "mean"
+    
+    - id: SaveMne
+      module: nodes.data_flow.save_mne
+      class: Save_mne
+      params:
+        config_path: {{ CONFIG_PATH }}
+
+    # EDGES ------------------------------   
+    edges: 
+      - source: DataImport
+        target: EpochRaw
+      - source: EpochRaw
+        target: Power
+      - source: Power
+        target: EpochPower
+      - source: EpochPower
+        target: Mean
+      - source: Mean
+        target: SaveMne
+
+    rate: 0  # Run this graph x times per second
+
+  

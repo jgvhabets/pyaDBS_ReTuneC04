@@ -5,7 +5,7 @@ import os
 
 
 def get_config_settings(
-    folder_filename: str = '/configs/config_timeflux.json',
+    folder_filename: str = '/config_timeflux.json',
     configs_folder = "configs"
 ):
     """
@@ -24,12 +24,8 @@ def get_config_settings(
             cfg = json.load(file)
     
     
-    if not folder_filename.endswith('.json') and len(folder_filename) > 0:
+    if not folder_filename.endswith('.json'):
         with open(os.path.join(configs_folder, folder_filename, "config_timeflux.json"), 'r') as file:
-            cfg = json.load(file)
-
-    else:
-        with open(os.path.join(configs_folder, "config_timeflux.json"), 'r') as file:
             cfg = json.load(file)
 
 

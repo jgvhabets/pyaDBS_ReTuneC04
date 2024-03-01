@@ -1,8 +1,6 @@
 {
+    "condition_name": "condition1",
     "stim": {
-        "detection_blank_period": 5,
-        "onset_period": 3,
-        "termination_period": 3,
-        "ramp_period": 2
+        "termination_period": 1
     }
 }
