@@ -49,17 +49,22 @@ class Save_mne(Node):
             # append data
             self.data_all = pd.concat([self.data_all, data])
 
+        # An empty dataframe will only come in once all input data has been processed. That's
+        # the time to save the data
         else:
             
             if self.saved == False:
 
+                # Generate mne raw array from data processed with timeflux
                 calibration_real_time_power = mne.io.RawArray(data=self.data_all.values.T, info=self.info)
                 
+                # save data
                 calibration_real_time_power.save(
                     self.save_path,
                     overwrite=True
                     )
                 
+                # quit timeflux
                 terminate_windows()
 
                 self.saved = True
