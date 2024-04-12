@@ -33,7 +33,7 @@ class Save_mne(Node):
         self.data_all = pd.DataFrame()
 
         # set save path
-        self.save_path = os.path.join(os.path.dirname(self.cfg["cal"]["path"]), "real_time_power_" + self.cfg["condition_name"] + ".fif")
+        self.save_path = os.path.join(os.path.dirname(self.cfg["cal"]["path"]), "real_time_data_" + self.cfg["condition_name"] + "_raw.fif")
 
         # misc
         self.saved = False

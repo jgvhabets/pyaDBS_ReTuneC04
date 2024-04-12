@@ -1,6 +1,7 @@
 {
     "condition_name": "condition1",
     "stim": {
-        "termination_period": 1
+        "termination_period": 1,
+        "threshold_percentile": 60
     }
 }

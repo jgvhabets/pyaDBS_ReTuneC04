@@ -31,7 +31,7 @@ class Single_threshold(Node):
          # period between change from low to high stim amp
         self._ramp_period = utils.convert_time_samples(freq=self.rate, time=self.stim_cfg['ramp_period'])
         # threshold that needs to be crossed for a specific onset/termination period to trigger stim ramp up/down
-        self._threshold = self.stim_cfg['threshold']
+        self._threshold = self.stim_cfg['threshold_absolute']
         # lower stim amp
         self._stim_amp_low = self.stim_cfg['stim_amp_low'] 
         # higher stim amp
