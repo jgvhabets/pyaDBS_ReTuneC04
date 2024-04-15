@@ -5,8 +5,8 @@ tmsi_utils.add_tmsi_repo()
 from TMSiSDK import tmsi_device
 from TMSiSDK.device import DeviceInterfaceType
 from TMSiFileFormats.file_readers.xdf_reader import Xdf_Reader
-from setup.saga_recorder import saga_recorder
-from setup.run_timeflux import run_timeflux
+from session.saga_recorder import saga_recorder
+from session.run_timeflux import run_timeflux
 from glob import glob
 import mne
 import json
@@ -18,7 +18,7 @@ from deepmerge import always_merger
 from copy import deepcopy
 
 
-class Session():
+class Setup():
 
     def __init__(self, experiment_name, patient_id, medication_state, session_id):
 
