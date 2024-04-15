@@ -325,7 +325,7 @@ class Tmsisampler(Node):
                                      (len(sampled_arr) // len(self.dev.channels),
                                      len(self.dev.channels)),
                                      order='C',)
-        print(f'SEND ARRAY SHAPE: {sampled_arr.shape}')
+        # print(f'SEND ARRAY SHAPE: {sampled_arr.shape}')
         return sampled_arr
 
     def get_stamps_for_samples(self, n_new_samples):

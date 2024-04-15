@@ -16,7 +16,6 @@ from matplotlib.cm import get_cmap
 import numpy as np
 from deepmerge import always_merger
 from copy import deepcopy
-from pathlib import Path
 
 
 class Session():
@@ -32,17 +31,14 @@ class Session():
         self.medication_state = medication_state
         self.session_id = session_id
 
-        print(f"\nSession object initialized with the following parameters:")
+        print(f"\nSession object initialized with the following parameters:\n")
         print(f"experiment_name = {experiment_name}")
         print(f"patient_id = {patient_id}")
         print(f"medication_state = {medication_state}")
         print(f"session_id = {session_id}")
 
-        # set internal attributes
-        self.calibration_run = 1
-
         # set directory
-        self._set_directory()
+        self._set_save_path()
 
         # load setup config
         self._load_setup_config()
@@ -216,23 +212,24 @@ class Session():
 
         # get path to experiment configuration and load it if existing
         config_experiment_path = os.path.join("configs", self.experiment_name, "config_experiment.json")
+        assert os.path.exists(config_experiment_path), f"\n{config_experiment_path} does not exist. Provide an experiment configuration.\n"
+        
+        # load experiment configuration
         if config_experiment_path:
             with open(config_experiment_path, 'r') as file:
                     config_experiment_template = json.load(file)
-        else:
-            print(f"{config_experiment_path} does not exist. Provide an experiment configuration.")
 
         # get paths to condition configurations
-        config_condition_paths = glob(os.path.join("configs", self.experiment_name, "config_condition_*.json"))
+        config_condition_paths = glob(os.path.join("configs", self.experiment_name, "config_condition*.json"))
 
         # check whether paths exist
         if config_condition_paths:
 
             # if paths exist, loop over these
-            for path in config_condition_paths:
+            for config_condition_path in config_condition_paths:
 
                 # load config
-                with open(path, 'r') as file:
+                with open(config_condition_path, 'r') as file:
                     config_condition = json.load(file)
 
                 # merge experiment and condition config, make deepcopy beforehand as merge is destructive to first argument 
@@ -247,17 +244,17 @@ class Session():
                 config_session["stim"]["stim_amp_high"] = max_stim_amp
 
                 # create path to session config
-                config_session_save_path = self._get_save_path(config_session["condition_name"], calibration_run_index)
+                config_session_path = self._get_save_path(config_session["condition_name"], calibration_run_index)
 
                 # save config in session folder
-                with open(config_session_save_path, 'w') as file:
+                with open(config_session_path, 'w') as file:
                     json.dump(config_session, file, indent=2)
 
                 # run timeflux calibration with this configuration to compute real-time power
                 try:
                     run_timeflux(
                         path_graph=os.path.join("graphs", self.experiment_name, self.experiment_name + "_calibration.yml"),
-                        path_config=str(config_session_save_path)
+                        path_config=str(config_session_path)
                         )
                 except SystemExit as e:
                     if e.code == 0:
@@ -266,7 +263,7 @@ class Session():
                         config_session = self._estimate_threshold(config_session)
 
                         # save updated config with threshold in session folder
-                        with open(config_session_save_path, 'w') as file:
+                        with open(config_session_path, 'w') as file:
                             json.dump(config_session, file, indent=2)
 
                         print("Threshold estimated. Configurations for all conditions saved.")
@@ -275,9 +272,9 @@ class Session():
                         raise
 
         else:
-            print(f"No configurations matching {config_condition_paths}. Provide an condition configurations.")
+            print(f"No configurations matching {config_condition_paths}. Provide condition configurations.")
 
-    def _set_directory(self):
+    def _set_save_path(self):
 
             # create BIDS root directory with sourcedata and rawdata subfolder
             root_dir = os.path.join("C:\\", "Measurements", self.experiment_name)
