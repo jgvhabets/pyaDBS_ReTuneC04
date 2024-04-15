@@ -24,7 +24,7 @@ class Power(Node):
 
         # initialize output class
         self.out = utils.output(rate=self.cfg['analysis']['power']['rate'], 
-                                channels=self.cfg['rec']['tmsi']['aDBS_channels'])      
+                                channels=self.cfg['rec']['tmsi']['aDBS_channel_bipolar'])      
         
     def update(self):
 

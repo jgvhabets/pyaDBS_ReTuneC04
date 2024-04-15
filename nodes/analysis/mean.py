@@ -19,7 +19,7 @@ class Mean(Node):
 
         # load configurations
         self.cfg = utils.get_config_settings(config_path)
-        self.recording_channels = self.cfg['rec']['tmsi']['aDBS_channels']
+        self.recording_channels = self.cfg['rec']['tmsi']['aDBS_channel_bipolar']
 
         # initialize output class
         self.out = utils.output(rate=self.cfg['analysis'][config_field]['rate'], 

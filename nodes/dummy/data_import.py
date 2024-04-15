@@ -25,11 +25,11 @@ class Data_import(Node):
         self.calibration_data = mne.io.read_raw(fname=self.cfg["cal"]["path"])
 
         # select channels
-        self.calibration_data.pick(self.cfg["rec"]["tmsi"]["aDBS_channels"])
+        self.calibration_data.pick(self.cfg["rec"]["tmsi"]["aDBS_channel_bipolar"])
 
         # initialize output class
         self.out = utils.output(rate=self.cfg['rec']['tmsi']['sampling_rate'], 
-                                channels=self.cfg['rec']['tmsi']['aDBS_channels'])
+                                channels=self.cfg['rec']['tmsi']['aDBS_channel_bipolar'])
         # set counter
         self.first_update = True
 

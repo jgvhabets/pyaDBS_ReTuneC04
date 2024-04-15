@@ -19,7 +19,7 @@ class Epoch(Node):
 
         # load configuration
         cfg = utils.get_config_settings(config_path)
-        self.recording_channels = cfg['rec']['tmsi']['aDBS_channels']
+        self.recording_channels = cfg['rec']['tmsi']['aDBS_channel_bipolar']
         self.cfg_epoch = cfg['data_flow'][config_field]
         self._win_size = utils.convert_time_samples(freq=self.cfg_epoch["rate_in"], time=self.cfg_epoch["window_duration"])
         self._step_size = utils.convert_time_samples(freq=self.cfg_epoch["rate_in"], time=self.cfg_epoch['step_duration'])

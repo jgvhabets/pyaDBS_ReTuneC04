@@ -212,7 +212,7 @@ class Session():
             vmax = np.percentile(self.calibration_data_tfr.data, 98),
             show=False); # plot psd       
 
-    def finalize_configuration(self, calibration_run_index, adbs_channel, max_stim_amp):
+    def finalize_configuration(self, calibration_run_index, adbs_channel_anode, adbs_channel_cathode, max_stim_amp):
 
         # get path to experiment configuration and load it if existing
         config_experiment_path = os.path.join("configs", self.experiment_name, "config_experiment.json")
@@ -242,7 +242,8 @@ class Session():
 
                 # add session configuration fields
                 config_session["cal"] = {"path": str(self._get_save_path("calibration", calibration_run_index))}
-                config_session["rec"]["tmsi"]["aDBS_channels"] = [adbs_channel]
+                config_session["rec"]["tmsi"]["aDBS_channels"] = [adbs_channel_anode, adbs_channel_cathode]
+                config_session["rec"]["tmsi"]["aDBS_channel_bipolar"] = [f"{adbs_channel_anode}-{adbs_channel_cathode}"]
                 config_session["stim"]["stim_amp_high"] = max_stim_amp
 
                 # create path to session config

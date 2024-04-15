@@ -24,7 +24,7 @@ class Save_mne(Node):
         
         # create info object
         self.info = mne.create_info(
-            ch_names=self.cfg["rec"]["tmsi"]["aDBS_channels"],
+            ch_names=self.cfg["rec"]["tmsi"]["aDBS_channel_bipolar"],
             sfreq=self.cfg["analysis"]["mean"]["rate"],
             ch_types="eeg"
             )
