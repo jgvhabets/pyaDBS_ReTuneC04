@@ -210,17 +210,21 @@ class Tmsisampler(Node):
             # Get a current lsl timestamp
             timestamp_received = local_clock()
 
+            # rereference aDBS channels bipolarly
+            samples_bipolar = sampled_arr[:, :-2][:,self.aDBS_channel_bool][:,0] - sampled_arr[:, :-2][:,self.aDBS_channel_bool][:,1]
+            samples_bipolar= samples_bipolar.reshape(-1,1)
+
             # Set timeflux output only using channels selected for aDBS using topic "selection"
             (self.o_selection.data,
-             self.o_selection.meta)  = self.out_selection.set(
-                 samples=sampled_arr[:, :-2][:,self.aDBS_channel_bool],
-                 timestamp_received=timestamp_received
+            self.o_selection.meta) = self.out_selection.set(
+                samples=samples_bipolar,
+                timestamp_received=timestamp_received
             )
 
             # Set timeflux output only using channels selected for aDBS using topic "all"     
             (self.o_all.data, 
-            self.o_all.meta)  = self.out_all.set(
-                samples=sampled_arr[:, :-2],
+            self.o_all.meta) = self.out_all.set(
+                samples=np.hstack((sampled_arr[:, :-2], samples_bipolar)),
                 timestamp_received=timestamp_received
             )
             
