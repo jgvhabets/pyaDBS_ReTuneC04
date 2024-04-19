@@ -34,37 +34,37 @@ class Tmsisampler(Node):
         self.tmsi_settings = self.cfg["rec"]["tmsi"]
 
         ### Initialise and Connect TMSi
-        print('\t...trying to initialize TMSi-SDK...')
+        self.logger.debug('\t...trying to initialize TMSi-SDK...')
         tmsi_device.initialize()  # init TMSi-SDK before using it
-        print('\t...TMSi-SDK initialized...')
+        self.logger.debug('\t...TMSi-SDK initialized...')
 
         # Execute a device discovery. This returns a list of device-objects for every discovered device.
-        print('\t...Discovering devices...')
+        self.logger.info('\t...Discovering devices...')
         discoveryList = tmsi_device.discover(tmsi_device.DeviceType.saga, 
                                              DeviceInterfaceType.docked, 
                                              DeviceInterfaceType.usb)
 
         # Get the handle to the first discovered device.
         if (len(discoveryList) > 0): self.dev = discoveryList[0]
-        print(f'\t...Found {discoveryList[0]}')
+        self.logger.info(f'\t...Found {discoveryList[0]}')
 
         # Check if connection to SAGA is not already open
         if self.dev.status.state == DeviceState.disconnected:
-            print('\t...opening connection to SAGA...')
+            self.logger.info('\t...opening connection to SAGA...')
             self.dev.open()  # Open a connection to the SAGA
-            print('\t...Connection to SAGA established...')
+            self.logger.info('\t...Connection to SAGA established...')
         else:
             # Connection already open
-            print('\t...Connection to SAGA already established, will not attempt to re-open...')
+            self.logger.info('\t...Connection to SAGA already established, will not attempt to re-open...')
 
         ### Update TMSi configuration
-        print('\t...Updating SAGA configuration...')
+        self.logger.info('\t...Updating SAGA configuration...')
         # display original enabled channels and sampling rate
-        print(f'Original  sampling rate: {self.dev.config.sample_rate} Hz')
-        print(f'Original active channels (n={len(self.dev.channels)}):')
+        self.logger.info(f'Original  sampling rate: {self.dev.config.sample_rate} Hz')
+        self.logger.info(f'Original active channels (n={len(self.dev.channels)}):')
         
         for idx, ch in enumerate(self.dev.channels):
-            print(f'channel # {idx} : "{ch.name}" in {ch.unit_name}')
+            self.logger.info(f'channel # {idx} : "{ch.name}" in {ch.unit_name}')
 
         # Retrieve all channels from the device and correct accelerometer names
         self.channels = self.dev.config.channels
@@ -84,14 +84,15 @@ class Tmsisampler(Node):
         self.txdelta = timedelta(seconds=1 / self.sfreq)
 
         # display updated enabled channels and sampling rate
-        print(f'Updated sampling rate: {self.sfreq} Hz')
-        print(f'Updated active channels (n={len(self.dev.channels)}):')
+        self.logger.info('\t......')
+        self.logger.info(f'Updated sampling rate: {self.sfreq} Hz')
+        self.logger.info(f'Updated active channels (n={len(self.dev.channels)}):')
         for idx, ch in enumerate(self.dev.channels):
-            print(f'channel # {idx} : "{ch.name}" in {ch.unit_name}')
+            self.logger.info(f'channel # {idx} : "{ch.name}" in {ch.unit_name}')
 
         for type in ChannelType:
             if (type != ChannelType.unknown) and (type != ChannelType.all_types):
-                print(f'{str(type)} = {self.dev.config.get_sample_rate(type)} Hz')
+                self.logger.info(f'{str(type)} = {self.dev.config.get_sample_rate(type)} Hz')
 
         ### Setup TMSi samples extraction
                 
@@ -112,14 +113,14 @@ class Tmsisampler(Node):
         else:   
 
             # initialize output classes
-            self.out_selection = utils.output(self.sfreq, self.aDBS_ch_names)
-            self.out_all = utils.output(self.sfreq, self.ch_names)
+            self.out_selection = utils.output(self.sfreq, self.tmsi_settings["aDBS_channel_bipolar"])
+            self.out_all = utils.output(self.sfreq, self.ch_names + self.tmsi_settings["aDBS_channel_bipolar"])
       
         # Open LSL-stream via pylsl for saving of all TMSi data if save_via_lsl == True
         if self.tmsi_settings["save_via_lsl"]:
             # define number of samples of blocks to be saved in LSL
             self.n_samples_save = self.tmsi_settings["sample_secs_save_lsl"] * self.sfreq
-            print(f'SET channel count buffer: {len(self.dev.channels)} plus one')
+            self.logger.debug(f'SET channel count buffer: {len(self.dev.channels)} plus one')
             # Initialise the lsl-stream for raw data
             # minus because of counter and status (CHECK ?)
             # plus one for later created timestamp column 
@@ -146,6 +147,7 @@ class Tmsisampler(Node):
             self.LabRec_reminder_done = False
 
         ### Start sampling on TMSi
+        self.logger.info('\t...Starting recording...')
         self.dev.start_measurement()
         # timelag circa .4 seconds  -> starttime in first block (circa .008 - .02 sec ahead)
 
@@ -175,7 +177,7 @@ class Tmsisampler(Node):
             if self.tmsi_settings["save_via_lsl"] and self.LabRec_reminder:
                 # at first sampling moment, execute LabRecorder reminder, discard data so far
                 self.LabRecorderReminder()  # sets LabRec_reminder false internally in second run (discard all data)
-                print(f'send zeros, length sampled data discarded: {samples.values.shape}')
+                self.logger.debug(f'send zeros, length sampled data discarded: {samples.values.shape}')
                 # dont send data yet before LabRecorder reminder
                 self.o.set(
                     [[float(0)] * len(self.aDBS_ch_names)],
@@ -194,7 +196,7 @@ class Tmsisampler(Node):
                     meta={"rate": self.sfreq,
                           "IGNORE": float(0)}
                 )
-                print(f'...sampler send shape: {samples.values.shape}')
+                self.logger.debug(f'...sampler send shape: {samples.values.shape}')
             
                 
             
@@ -364,7 +366,7 @@ class Tmsisampler(Node):
     def LabRecorderReminder(self):
         if self.tmsi_settings["LabRec_reminder_sec"] > 0 and not self.LabRec_reminder_done:
 
-            print(
+            self.logger.info(
                 '\n\n########################################\n\n'
                 f'!!! {self.tmsi_settings["LabRec_reminder_sec"] + 5}'
                     ' SECONDS TO START LABRECORDER !!!!!!!'
@@ -372,14 +374,14 @@ class Tmsisampler(Node):
             )
 
             time.sleep(self.tmsi_settings['LabRec_reminder_sec'])  # 10 seconds extra :)
-            print('LabRecorder waiting time passed\n')
+            self.logger.info('LabRecorder waiting time passed\n')
         
             self.LabRec_reminder_done = True  # prevent another reminder execution
 
         else:
             # only in second update, reminder False to discard the data sampled during reminder
             self.LabRec_reminder = False
-            print('LabRecorder reminder switched OFF')
+            self.logger.info('LabRecorder reminder switched OFF')
 
 
 
@@ -394,15 +396,15 @@ class Tmsisampler(Node):
 
             # stop sampling if SAGA is currently sampling
             if self.dev.status.state == DeviceState.sampling:
-                print('\t...Stopping recording on SAGA...')
+                self.logger.info('\t...Stopping recording on SAGA...')
                 self.dev.stop_measurement()
-                print('\t...Recording on SAGA stopped...')
+                self.logger.info('\t...Recording on SAGA stopped...')
             
             # close connection to SAGA if connected
             if self.dev.status.state == DeviceState.connected:
-                print('\t...Closing connection to SAGA...')
+                self.logger.info('\t...Closing connection to SAGA...')
                 self.dev.close()
-                print('\t...Connection to SAGA closed...')
+                self.logger.info('\t...Connection to SAGA closed...')
 
 if __name__ == '__main__':
     """

@@ -188,7 +188,7 @@ class Single_threshold(Node):
 
         if self.i_StimSwitch.data['switch'].iat[0] == 'start':
             self._stim_switch = 'on'
-            print(f'\t...aDBS activated at {datetime.now(tz=timezone.utc)}...')
+            self.logger.info(f'\t...aDBS activated at {datetime.now(tz=timezone.utc)}...')
         elif self.i_StimSwitch.data['switch'].iat[0] == 'stop':
             self._stim_switch = 'off'
             # reset states
@@ -196,4 +196,4 @@ class Single_threshold(Node):
             self._trigger_state = 'none'
             self._in_detection_blank = True
             self._stim_amp = 0
-            print(f'\t...aDBS deactivated at {datetime.now(tz=timezone.utc)}...')
+            self.logger.info(f'\t...aDBS deactivated at {datetime.now(tz=timezone.utc)}...')
