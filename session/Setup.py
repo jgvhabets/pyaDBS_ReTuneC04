@@ -220,7 +220,7 @@ class Setup():
                     config_experiment_template = json.load(file)
 
         # get paths to condition configurations
-        config_condition_paths = glob(os.path.join("configs", self.experiment_name, "config_condition*.json"))
+        config_condition_paths = glob(os.path.join("configs", self.experiment_name, "config_condition_*.json"))
 
         # check whether paths exist
         if config_condition_paths:
