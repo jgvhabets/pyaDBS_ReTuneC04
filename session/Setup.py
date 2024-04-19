@@ -87,10 +87,15 @@ class Setup():
             self.dev.close()
             print('\t...Connection to SAGA closed...')
 
-    def record_calibration_data(self, calibration_run_index):
+    def set_calibration_id(self, calibration_id):
+
+        self.calibration_id = calibration_id
+        print(f"calibration_id = {calibration_id}")
+
+    def record_calibration_data(self):
 
         # get filename for calibration data
-        calibration_save_path = self._get_save_path("calibration", calibration_run_index)
+        calibration_save_path = self._get_save_path("calibration")
 
         # check if file was already created before. If yes, query whether user wants to proceed and write file with same run index or to change run index
         if os.path.exists(calibration_save_path):
@@ -102,7 +107,7 @@ class Setup():
                 if answer in ("y", "n"):
 
                     if answer == "n":
-                        print("Recording aborted. Please change calibration_run_index.")
+                        print("Recording aborted. Please change calibration_id.")
                         return
 
                     if answer == "y":
@@ -141,10 +146,10 @@ class Setup():
         # remove tmsi xdf data
         os.remove(calibration_save_path_tmsi[0])
            
-    def compute_spectra(self, calibration_run_index): 
+    def compute_spectra(self): 
         
         # load calibration data
-        self._load_calibration_data(calibration_run_index)
+        self._load_calibration_data()
         
         # select rereferenced channels
         self.calibration_data.pick(self.setup_config["reference_scheme"]["ch_name"])
@@ -208,7 +213,7 @@ class Setup():
             vmax = np.percentile(self.calibration_data_tfr.data, 98),
             show=False); # plot psd       
 
-    def finalize_configuration(self, calibration_run_index, adbs_channel_anode, adbs_channel_cathode, max_stim_amp):
+    def finalize_configuration(self, adbs_channel_anode, adbs_channel_cathode, max_stim_amp):
 
         # get path to experiment configuration and load it if existing
         config_experiment_path = os.path.join("configs", self.experiment_name, "config_experiment.json")
@@ -238,13 +243,13 @@ class Setup():
                 always_merger.merge(config_session, config_condition)
 
                 # add session configuration fields
-                config_session["cal"] = {"path": str(self._get_save_path("calibration", calibration_run_index))}
+                config_session["cal"] = {"path": str(self._get_save_path("calibration"))}
                 config_session["rec"]["tmsi"]["aDBS_channels"] = [adbs_channel_anode, adbs_channel_cathode]
                 config_session["rec"]["tmsi"]["aDBS_channel_bipolar"] = [f"{adbs_channel_anode}-{adbs_channel_cathode}"]
                 config_session["stim"]["stim_amp_high"] = max_stim_amp
 
                 # create path to session config
-                config_session_path = self._get_save_path(config_session["condition_name"], calibration_run_index)
+                config_session_path = self._get_save_path(config_session["condition_name"])
 
                 # save config in session folder
                 with open(config_session_path, 'w') as file:
@@ -311,7 +316,7 @@ class Setup():
         for idx, ch in enumerate(self.dev.channels):
             print('[{0}] : [{1}] in [{2}]'.format(idx, ch.name, ch.unit_name))
 
-    def _get_save_path(self, task, calibration_run_index):
+    def _get_save_path(self, task):
        
         # set extension based on type of data to be saved
         if task == "calibration":
@@ -322,7 +327,7 @@ class Setup():
         # update BIDSpath object of save path to account fo data specific fields
         bidspath = self.save_path.copy().update(
             task=task,
-            run=calibration_run_index,
+            run=self.calibration_id,
             suffix="ieeg",
             extension=extension,
             check=False
@@ -338,14 +343,14 @@ class Setup():
         with open(config_filename, 'r') as file:
             self.setup_config = json.load(file)     
     
-    def _load_calibration_data(self, calibration_run_index):
+    def _load_calibration_data(self):
 
         # get filename for calibration data
-        calibration_save_path = self._get_save_path("calibration", calibration_run_index)
+        calibration_save_path = self._get_save_path("calibration")
 
-        # check if file exists with given calibration_run_index. If it exists, load it.
+        # check if file exists with given calibration_id. If it exists, load it.
         if not os.path.exists(calibration_save_path):
-            print("\nNo calibration file exists with this calibration_run_index. Record calibration data before loading.")
+            print("\nNo calibration file exists with this calibration_id. Record calibration data before loading.")
             return
 
         else:
