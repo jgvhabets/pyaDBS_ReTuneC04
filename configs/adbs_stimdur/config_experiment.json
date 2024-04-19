@@ -4,10 +4,10 @@
             "save_via_lsl": false,
             "use_wallclock_timestamp": false,
             "queue_size": 0,
-            "sample_secs_save_lsl": [],
+            "sample_secs_save_lsl": 1,
             "sampling_rate": 1000,
             "FETCH_FULL_Q": true,
-            "MIN_BLOCK_SIZE_msec": [],
+            "MIN_BLOCK_SIZE_msec": 1,
             "recording_channel_types": ["LFP", "ACC"],
             "aDBS_channels": []
         }
