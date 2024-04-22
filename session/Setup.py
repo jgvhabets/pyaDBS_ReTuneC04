@@ -282,7 +282,7 @@ class Setup():
     def _set_save_path(self):
 
             # create BIDS root directory with sourcedata and rawdata subfolder
-            root_dir = os.path.join("C:\\", "Measurements", self.experiment_name)
+            root_dir = os.path.join("C:\\", "LFP_recordings", "Measurements", self.experiment_name)
             if not os.path.exists(root_dir):
                 os.makedirs(os.path.join(root_dir, "sourcedata"))
                 os.makedirs(os.path.join(root_dir, "rawdata"))

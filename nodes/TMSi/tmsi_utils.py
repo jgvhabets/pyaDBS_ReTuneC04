@@ -102,8 +102,7 @@ def channel_selection(self):
                                 for c in self.ch_names]
     # print(f'adbs bool: {self.aDBS_channel_bool}')
     self.aDBS_ch_names = list(compress(self.ch_names, self.aDBS_channel_bool))
-    # print(f'selected aDBS channel-names: {self.aDBS_ch_names}')
-        
+    self.logger.info(f'Selected aDBS channel names: {self.aDBS_ch_names}')
     assert sum(self.aDBS_channel_bool) > 0, 'no aDBS channels selected'
                     
 def sig_vector_magn(sig, return_mean = True):

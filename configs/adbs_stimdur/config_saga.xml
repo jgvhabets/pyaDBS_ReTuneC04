@@ -18,22 +18,22 @@
     </Channel>
     <Channel>
       <ChanNr>1</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>LFPR1</AltChanName>
     </Channel>
     <Channel>
       <ChanNr>2</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>LFPR234</AltChanName>
     </Channel>
     <Channel>
       <ChanNr>3</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>LFPR567</AltChanName>
     </Channel>
     <Channel>
       <ChanNr>4</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>LFPR8</AltChanName>
     </Channel>
     <Channel>
@@ -58,22 +58,22 @@
     </Channel>
     <Channel>
       <ChanNr>9</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>LFPL1</AltChanName>
     </Channel>
     <Channel>
       <ChanNr>10</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>LFPL234</AltChanName>
     </Channel>
     <Channel>
       <ChanNr>11</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>LFPL567</AltChanName>
     </Channel>
     <Channel>
       <ChanNr>12</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>LFPL8</AltChanName>
     </Channel>
     <Channel>
@@ -98,32 +98,32 @@
     </Channel>
     <Channel>
       <ChanNr>17</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>ECOGL1</AltChanName>
     </Channel>
     <Channel>
       <ChanNr>18</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>ECOGL2</AltChanName>
     </Channel>
     <Channel>
       <ChanNr>19</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>ECOGL3</AltChanName>
     </Channel>
     <Channel>
       <ChanNr>20</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>ECOGL4</AltChanName>
     </Channel>
     <Channel>
       <ChanNr>21</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>ECOGL5</AltChanName>
     </Channel>
     <Channel>
       <ChanNr>22</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>ECOGL6</AltChanName>
     </Channel>
     <Channel>
@@ -338,17 +338,17 @@
     </Channel>
     <Channel>
       <ChanNr>65</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>EMGR</AltChanName>
     </Channel>
     <Channel>
       <ChanNr>66</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>EMGL</AltChanName>
     </Channel>
     <Channel>
       <ChanNr>67</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>ECG</AltChanName>
     </Channel>
     <Channel>
@@ -358,32 +358,32 @@
     </Channel>
     <Channel>
       <ChanNr>69</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>ACCRX</AltChanName>
     </Channel>
     <Channel>
       <ChanNr>70</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>ACCRY</AltChanName>
     </Channel>
     <Channel>
       <ChanNr>71</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>ACCRZ</AltChanName>
     </Channel>
     <Channel>
       <ChanNr>72</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>ACCLX</AltChanName>
     </Channel>
     <Channel>
       <ChanNr>73</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>ACCLY</AltChanName>
     </Channel>
     <Channel>
       <ChanNr>74</ChanNr>
-      <ChanDivider>2</ChanDivider>
+      <ChanDivider>0</ChanDivider>
       <AltChanName>ACCLZ</AltChanName>
     </Channel>
     <Channel>

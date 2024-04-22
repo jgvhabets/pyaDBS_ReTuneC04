@@ -49,7 +49,7 @@ class Execution():
     def _check_save_path(self):
        
         # set BIDS root directory
-        root_dir = os.path.join("C:\\", "Measurements", self.experiment_name)
+        root_dir = os.path.join("C:\\", "LFP_recordings", "Measurements", self.experiment_name)
 
         # create a BIDSpath object using the session infos provided
         self.save_path = BIDSPath(
