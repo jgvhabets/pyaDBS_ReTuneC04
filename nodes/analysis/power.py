@@ -23,7 +23,7 @@ class Power(Node):
         self._fmax = self.power_cfg["f_band_max"]
 
         # initialize output class
-        self.out = utils.output(rate=self.cfg['analysis']['power']['rate'], 
+        self.out = utils.output(rate=self.power_cfg['rate'], 
                                 channels=self.cfg['rec']['tmsi']['aDBS_channel_bipolar'])      
         
     def update(self):

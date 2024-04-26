@@ -5,10 +5,10 @@
             "use_wallclock_timestamp": false,
             "queue_size": 0,
             "sample_secs_save_lsl": 1,
-            "sampling_rate": 1000,
+            "sampling_rate": 4000,
             "FETCH_FULL_Q": true,
             "MIN_BLOCK_SIZE_msec": 1,
-            "recording_channel_types": ["LFP", "ACC"],
+            "recording_channel_types": ["LFP", "ECOG", "EMG", "ECG", "ACC"],
             "aDBS_channels": []
         }
     },
@@ -18,33 +18,33 @@
         },
         "power": {
             "rate": 20,
-            "f_band_min": 4,
-            "f_band_max": 6
+            "f_band_min": [],
+            "f_band_max": []
         }
     },
     "data_flow": {
         "epoch_raw": {
-            "rate_in": 1000,
+            "rate_in": 4000,
             "rate_out": 20,
             "step_duration": 0.05,
-            "window_duration": 1
+            "window_duration": 0.25
         },
         "epoch_power": {
             "rate_in": 20,
             "rate_out": 20,
             "step_duration": 0.05,
-            "window_duration": 0.5
+            "window_duration": 0.2
         }
     },
     "CONNECT_NEUROOMEGA": false,
     "stim": {
         "rate": 20,
         "detection_blank_period": 1,
-        "onset_period": 0.5,
+        "onset_period": 0.25,
         "termination_period": [],
         "ramp_period": 0.5,
         "threshold_absolute": [],
-        "threshold_percentile": [],
+        "threshold_percentile": 60,
         "stim_amp_low": 0,
         "stim_amp_high": [],
         "stim_amp_param": "STIM_AMP_RIGHT",
