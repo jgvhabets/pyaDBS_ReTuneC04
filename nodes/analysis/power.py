@@ -40,8 +40,8 @@ class Power(Node):
             if data.notna().all().iat[0]:
 
                 # Compute PSD
-                freqs, psd = periodogram(data, fs=self.i.meta["rate"], detrend=False, axis=0)
-            
+                freqs, psd = periodogram(data, fs=self.cfg['rec']['tmsi']['sampling_rate'], detrend=False, axis=0)
+
                 # Select frequencies of interest
                 sel_psd, _ = select_bandwidths(
                     values=psd, freqs=freqs,
