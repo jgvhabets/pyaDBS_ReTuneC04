@@ -30,6 +30,7 @@ class Epoch(Node):
         
         # initialize buffer
         self.buffer = pd.DataFrame(np.nan, index=range(self._win_size-self._step_size), columns=self.recording_channels+["timestamps_received", "package_numbers", "package_ids"])
+        self.n_overflow = 0
 
         self.config_field = config_field
 
@@ -43,7 +44,13 @@ class Epoch(Node):
             # add data to buffer
             self.buffer = pd.concat([self.buffer, self.i.data])
 
-            # print(f'epoch {self.config_field} -- buffer size: {self.buffer.shape[0]}')
+            # track whether buffer is capable to process incoming data in real-time
+            if self.i.data.shape[0] > self._step_size:
+                self.n_overflow += 1
+                if self.n_overflow > 10:
+                    self.logger.info(f'epoch {self.config_field} -- buffer is overflowing')    
+                    self.n_overflow = 0
+
             # self.logger.info(f'epoch {self.config_field} -- buffer size: {self.buffer.shape[0]}')
 
         # Check if buffer has reached window size
