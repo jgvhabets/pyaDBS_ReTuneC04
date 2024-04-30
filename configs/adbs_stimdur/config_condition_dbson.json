@@ -1,0 +1,10 @@
+{
+    "gen": {
+        "condition_name": "dbson"
+    },
+    "stim": {
+        "onset_period": 0.1,
+        "threshold_percentile": 1,
+        "termination_period": 1000
+    }
+}

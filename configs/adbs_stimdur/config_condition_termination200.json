@@ -1,0 +1,8 @@
+{
+    "gen": {
+        "condition_name": "termination200"
+    },
+    "stim": {
+        "termination_period": 0.2
+    }
+}

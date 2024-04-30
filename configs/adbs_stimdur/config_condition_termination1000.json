@@ -1,6 +1,6 @@
 {
     "gen": {
-        "condition_name": "1"
+        "condition_name": "termination1000"
     },
     "stim": {
         "termination_period": 1

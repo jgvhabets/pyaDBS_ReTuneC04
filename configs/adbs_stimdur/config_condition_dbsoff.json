@@ -1,0 +1,10 @@
+{
+    "gen": {
+        "condition_name": "dbsoff"
+    },
+    "stim": {
+        "onset_period": 1000,
+        "threshold_percentile": 99,
+        "termination_period": 0.1
+    }
+}
