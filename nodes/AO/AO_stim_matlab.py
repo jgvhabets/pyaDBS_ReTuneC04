@@ -60,9 +60,10 @@ class AO_stim(Node):
                         )
 
             self.NO_CONNECTED = True
+            self.logger.info('...Neuro-Omega connected...')
 
         else:
-            print('\n### Neuro-Omega not connected (according to configs.json)')
+            self.logger.info('...Neuro-Omega not connected...')
 
         # initialize output class
         self.out = utils.output(rate=self.cfg['analysis']['mean']['rate'], 
@@ -73,7 +74,7 @@ class AO_stim(Node):
         # make sure we have a non-empty dataframe
         if self.i.ready():
 
-            # print(f'AO_stim_matlab -- data input at: {local_clock()}') 
+            # self.logger.info(f'AO_stim_matlab -- data input at: {local_clock()}') 
 
             # extract data
             data, package_id = utils.extract_data(self.i)
@@ -107,7 +108,7 @@ class AO_stim(Node):
                                                      timestamp_received=timestamp_received,
                                                      package_id=package_id)
             
-            # print(f'AO_stim_matlab -- sent from AO_stim_matlab at: {local_clock()}, package number {self.o.data["package_numbers"].iat[0]}, package id {self.o.data["package_ids"].iat[0]}')
+            # self.logger.info(f'AO_stim_matlab -- sent from AO_stim_matlab at: {local_clock()}, package number {self.o.data["package_numbers"].iat[0]}, package id {self.o.data["package_ids"].iat[0]}')
         
 
     def terminate(self):

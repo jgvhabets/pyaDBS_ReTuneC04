@@ -38,17 +38,18 @@ class Epoch(Node):
         # Make sure we have a non-empty dataframe
         if self.i.ready():
 
-            # print(f'epoch {self.config_field} -- data input at: {local_clock()}')
+            # self.logger.info(f'epoch {self.config_field} -- data input at: {local_clock()}')
 
             # add data to buffer
             self.buffer = pd.concat([self.buffer, self.i.data])
 
             # print(f'epoch {self.config_field} -- buffer size: {self.buffer.shape[0]}')
+            # self.logger.info(f'epoch {self.config_field} -- buffer size: {self.buffer.shape[0]}')
 
         # Check if buffer has reached window size
         if self.buffer.shape[0] >= self._win_size:
 
-            # print(f'epoch -- window size reached at: {local_clock()}')
+            # self.logger.info(f'epoch -- window size reached at: {local_clock()}')
 
             # extract data from buffer
             data_from_buffer = self.buffer.iloc[:self._win_size,]
@@ -64,4 +65,4 @@ class Epoch(Node):
             self.o.data, self.o.meta  = self.out.set(samples=data_from_buffer[self.recording_channels],
                                                         timestamp_received=timestamp_received)
 
-            # print(f'epoch {self.config_field} -- sent from epoch at: {local_clock()}, package number {self.o.data["package_numbers"].iat[0]}, package id {self.o.data["package_ids"].iat[0]}')
+            # self.logger.info(f'epoch {self.config_field} -- sent from epoch at: {local_clock()}, package number {self.o.data["package_numbers"].iat[0]}, package id {self.o.data["package_ids"].iat[0]}')

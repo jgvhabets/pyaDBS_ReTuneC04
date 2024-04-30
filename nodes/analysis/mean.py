@@ -30,7 +30,7 @@ class Mean(Node):
         # Make sure we have a non-empty dataframe
         if self.i.ready():
 
-            # print(f'mean -- data input at: {local_clock()}')
+            # self.logger.info(f'mean -- data input at: {local_clock()}')
 
             # extract data
             data, package_id = utils.extract_data(self.i)
@@ -47,4 +47,4 @@ class Mean(Node):
                                                      timestamp_received=timestamp_received,
                                                      package_id=package_id)
 
-            # print(f'mean -- sent from mean at: {local_clock()}, package number {self.o.data["package_numbers"].iat[0]}, package id {self.o.data["package_ids"].iat[0]}')
+            # self.logger.info(f'mean -- sent from mean at: {local_clock()}, package number {self.o.data["package_numbers"].iat[0]}, package id {self.o.data["package_ids"].iat[0]}')

@@ -152,11 +152,11 @@ class Tmsisampler(Node):
         # timelag circa .4 seconds  -> starttime in first block (circa .008 - .02 sec ahead)
 
     def update(self):
-        
+
+        # self.logger.info(f'tmsi_sampler -- start data input at: {local_clock()}')
+
         # Get samples from SAGA, reshape internally
         sampled_arr = self.get_samples()
-
-        # print(f'tmsi_sampler -- data input at: {local_clock()}')
 
         # Prepare output depending on use_wallclock_timestamp
 
@@ -228,7 +228,7 @@ class Tmsisampler(Node):
                 timestamp_received=timestamp_received
             )
             
-            # print(f'tmsi_sampler -- sent from tmsi_sampler at: {local_clock()}, package number {self.o_selection.data["package_numbers"].iat[0]}, package id {self.o_selection.data["package_ids"].iat[0]}')
+            # self.logger.info(f'tmsi_sampler -- sent from tmsi_sampler at: {local_clock()}, package number {self.o_selection.data["package_numbers"].iat[0]}, package id {self.o_selection.data["package_ids"].iat[0]}')
 
         # Transmit marker with wall clock time every iteration and regularly transmit data
         # with all channels to LSL if save_via_lsl == true and use_wallclock_timestamp == true.
@@ -331,7 +331,7 @@ class Tmsisampler(Node):
                                      (len(sampled_arr) // len(self.dev.channels),
                                      len(self.dev.channels)),
                                      order='C',)
-        # print(f'SEND ARRAY SHAPE: {sampled_arr.shape}')
+        # self.logger.info(f'SEND ARRAY SHAPE: {sampled_arr.shape[0]}')
         return sampled_arr
 
     def get_stamps_for_samples(self, n_new_samples):
