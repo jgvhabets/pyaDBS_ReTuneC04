@@ -157,7 +157,7 @@ class Setup():
 
         # Select last 10 seconds of data. If less than 10 seconds recorded, use all data
         tmax = self.calibration_data.times[-1]
-        tmin = tmax - 10
+        tmin = tmax - 60
         if tmin > 0:
             self.calibration_data.crop(tmin=tmin, tmax=tmax)
 
