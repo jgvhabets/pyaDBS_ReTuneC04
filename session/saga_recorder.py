@@ -38,6 +38,7 @@ import nodes.TMSi.tmsi_utils as tmsi_utils
 tmsi_utils.add_tmsi_repo()
 import sys
 from os.path import join
+from time import sleep
 
 from PySide2 import QtWidgets
 
@@ -65,12 +66,12 @@ def saga_recorder(save_path):
             # Open a connection to the SAGA-system
             dev.open()      
             
-            # Check if there is already a plotter application in existence
-            plotter_app = QtWidgets.QApplication.instance()
+            # # Check if there is already a plotter application in existence
+            # plotter_app = QtWidgets.QApplication.instance()
             
-            # Initialise the plotter application if there is no other plotter application
-            if not plotter_app:
-                plotter_app = QtWidgets.QApplication(sys.argv)
+            # # Initialise the plotter application if there is no other plotter application
+            # if not plotter_app:
+            #     plotter_app = QtWidgets.QApplication(sys.argv)
                         
             
             # Initialise the desired file-writer class and state its file path
@@ -79,20 +80,29 @@ def saga_recorder(save_path):
             # Define the handle to the device
             file_writer.open(dev)
         
-            # Define the GUI object and show it 
-            # The channel selection argument states which channels need to be displayed initially by the GUI
-            plot_window = PlottingGUI(plotter_format = PlotterFormat.signal_viewer,
-                                    figurename = 'A RealTimePlot', 
-                                    device = dev)
-            plot_window.show()
+            # # Define the GUI object and show it 
+            # # The channel selection argument states which channels need to be displayed initially by the GUI
+            # plot_window = PlottingGUI(plotter_format = PlotterFormat.signal_viewer,
+            #                         figurename = 'A RealTimePlot', 
+            #                         device = dev)
+            # plot_window.show()
             
-            # Enter the event loop
-            plotter_app.exec_()
+            # # Enter the event loop
+            # plotter_app.exec_()
             
-            # Quit and delete the Plotter application
-            QtWidgets.QApplication.quit()
-            del plotter_app
+            # # Quit and delete the Plotter application
+            # QtWidgets.QApplication.quit()
+            # del plotter_app
             
+            # start recording
+            dev.start_measurement()
+
+            print('starting recording for 180s')
+            sleep(180)
+
+            # stop recording
+            dev.stop_measurement()
+
             # Close the file writer after GUI termination
             file_writer.close()
             
