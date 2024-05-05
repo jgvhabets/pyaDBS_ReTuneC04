@@ -18,15 +18,15 @@ timeflux, py-newronika interface, and py-TMSi interface.
     1024: time.sleep(0.050) -> time.sleep(0.001)
     1130: time.sleep(0.010) -> time.sleep(0.001)
 
+- Further packages to install:
+  - `pip install timeflux==0.16, timeflux_example, timeflux_ui, timeflux_dsp, pylsl==1.16.2, serial, ipympl, deepmerge, EDFlib, matlabengine==9.11.21, mne-bids, mne==1.2.0`
+
 - for AlphaOmega:
   - succesfully install matlabengine before installing neuroomega_matlab (see above). For MATLAB version R2021b version = 9.11.21.
-  - `neuroomega_matlab` folder in `REPO\packages` (including pyproject.toml and src)
+  - create `neuroomega_matlab` folder in `REPO\packages` (including pyproject.toml and src)
   - ensure that correct env is activated! Execute without charite proxies (!)
   - `cd REPO\packages\neuroomega_matlab`, `pip install -e .`  (pip install the package editable)
   - required default scripts: AO_DefaultStopStimulation, and edited version of AO_DefaultStimulation
-
-- Further packages to install:
-  - `pip install timeflux==0.16, timeflux_example, timeflux_ui, timeflux_dsp, pylsl==1.16.2, serial, ipympl, deepmerge, EDFlib, matlabengine==9.11.21, mne-bids, mne==1.2.0`
 
 ### Important Notes
 
