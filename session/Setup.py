@@ -155,11 +155,8 @@ class Setup():
         # select rereferenced channels
         self.calibration_data.pick(self.setup_config["reference_scheme"]["ch_name"])
 
-        # Select last 10 seconds of data. If less than 10 seconds recorded, use all data
-        tmax = self.calibration_data.times[-1]
-        tmin = tmax - 60
-        if tmin > 0:
-            self.calibration_data.crop(tmin=tmin, tmax=tmax)
+        # downsample to speed up computation
+        self.calibration_data.resample(sfreq=200)
 
         # Transform to epoch object. Epoch data to a single epoch just to enable usage tfr functions later on as these don't work on Raw objects.
         self.calibration_data_epochs = mne.make_fixed_length_epochs(
@@ -182,7 +179,7 @@ class Setup():
         # compute morlet wavelet transformation
         self.calibration_data_tfr = mne.time_frequency.tfr_morlet(
             self.calibration_data_epochs,
-            freqs=np.arange(1,100.5,0.5),
+            freqs=np.arange(1,100.5,1),
             n_cycles=4,
             picks="all",
             return_itc=False
