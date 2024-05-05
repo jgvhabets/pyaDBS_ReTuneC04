@@ -40,7 +40,7 @@ class Power(Node):
             if data.notna().all().iat[0]:
 
                 # Compute PSD
-                freqs, psd = periodogram(data, fs=self.cfg['rec']['tmsi']['sampling_rate'], detrend=False, axis=0)
+                freqs, psd = periodogram(data, fs=self.cfg['rec']['tmsi']['sampling_rate'], detrend=False, axis=0, window='hanning')
 
                 # Select frequencies of interest
                 sel_psd, _ = select_bandwidths(
@@ -63,5 +63,5 @@ class Power(Node):
             self.o.data, self.o.meta  = self.out.set(samples=mean_psd,
                                                      timestamp_received=timestamp_received,
                                                      package_id=package_id)
-
+            pass
             # self.logger.info(f'power -- sent from power at: {local_clock()}, package number {self.o.data["package_numbers"].iat[0]}, package id {self.o.data["package_ids"].iat[0]}')
