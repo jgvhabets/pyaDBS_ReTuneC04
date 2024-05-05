@@ -28,40 +28,44 @@ class Power(Node):
         
     def update(self):
 
-        # Make sure input data is available
-        if self.i.ready():
+        # loop through numbered import ports
+        for iteration, port in enumerate(list(self.ports.values())):
 
-            # self.logger.info(f'power -- data input at: {local_clock()}')
+            # Make sure input data is available
+            if port.ready():
 
-            # Extract data
-            data, package_id = utils.extract_data(self.i)
+                # self.logger.info(f'power -- data input at: {local_clock()}')
 
-            # Make sure data does not contain NaNs
-            if data.notna().all().iat[0]:
+                # Extract data
+                data, package_id = utils.extract_data(port)
 
-                # Compute PSD
-                freqs, psd = periodogram(data, fs=self.cfg['rec']['tmsi']['sampling_rate'], detrend=False, axis=0, window='hanning')
+                # Make sure data does not contain NaNs
+                if data.notna().all().iat[0]:
 
-                # Select frequencies of interest
-                sel_psd, _ = select_bandwidths(
-                    values=psd, freqs=freqs,
-                    f_min=self._fmin, f_max=self._fmax
-                )
+                    # Compute PSD
+                    freqs, psd = periodogram(data, fs=self.cfg['rec']['tmsi']['sampling_rate'], detrend=False, axis=0, window='hanning')
 
-                # Average over frequencies of interest
-                mean_psd = np.mean(sel_psd).reshape(1,-1)
+                    # Select frequencies of interest
+                    sel_psd, _ = select_bandwidths(
+                        values=psd, freqs=freqs,
+                        f_min=self._fmin, f_max=self._fmax
+                    )
 
-            # if it contains NaNs, return NaN as power value
-            else:
+                    # Average over frequencies of interest
+                    mean_psd = np.mean(sel_psd).reshape(1,-1)
 
-                mean_psd = np.array([np.nan]).reshape(1,-1)
+                # if it contains NaNs, return NaN as power value
+                else:
 
-            # get current timestamp
-            timestamp_received = local_clock()
+                    mean_psd = np.array([np.nan]).reshape(1,-1)
 
-            # Set output
-            self.o.data, self.o.meta  = self.out.set(samples=mean_psd,
-                                                     timestamp_received=timestamp_received,
-                                                     package_id=package_id)
-            pass
-            # self.logger.info(f'power -- sent from power at: {local_clock()}, package number {self.o.data["package_numbers"].iat[0]}, package id {self.o.data["package_ids"].iat[0]}')
+                # get current timestamp
+                timestamp_received = local_clock()
+
+                # Set output
+                output_port = getattr(self, f"o_{iteration+1}") # account for python indices starting with 0
+                output_port.data, output_port.meta  = self.out.set(samples=mean_psd,
+                                                        timestamp_received=timestamp_received,
+                                                        package_id=package_id)
+
+                # self.logger.info(f'power -- sent from power at: {local_clock()}, package number {self.o.data["package_numbers"].iat[0]}, package id {self.o.data["package_ids"].iat[0]}')

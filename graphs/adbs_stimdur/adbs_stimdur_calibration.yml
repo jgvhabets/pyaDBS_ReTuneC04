@@ -52,13 +52,13 @@ graphs:
     edges: 
       - source: DataImport
         target: EpochRaw
-      - source: EpochRaw
+      - source: EpochRaw:*
         target: Power
-      - source: Power
+      - source: Power:*
         target: EpochPower
-      - source: EpochPower
+      - source: EpochPower:*
         target: Mean
-      - source: Mean
+      - source: Mean:*
         target: SaveMne
 
     rate: 0  # Run this graph x times per second

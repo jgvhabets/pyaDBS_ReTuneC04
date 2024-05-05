@@ -40,32 +40,33 @@ class Save_mne(Node):
 
     def update(self):
         
-        # Make sure we have a non-empty dataframe
-        if self.i.ready():
+        # loop through numbered import ports
+        for iteration, port in enumerate(list(self.ports.values())):
 
-            # extract data
-            data, package_id = utils.extract_data(self.i)
+            # Make sure we have a non-empty dataframe
+            if port.ready():
 
-            # append data
-            self.data_all = pd.concat([self.data_all, data])
+                # extract data
+                data, package_id = utils.extract_data(port)
 
-        # An empty dataframe will only come in once all input data has been processed. That's
+                # append data
+                self.data_all = pd.concat([self.data_all, data])
+
+        # Empty port list will only come in once all input data has been processed. That's
         # the time to save the data
-        else:
+        if len(self.ports) == 0 and self.saved == False:
             
-            if self.saved == False:
+            # Generate mne raw array from data processed with timeflux
+            calibration_real_time_power = mne.io.RawArray(data=self.data_all.values.T, info=self.info)
+            
+            # save data
+            calibration_real_time_power.save(
+                self.save_path,
+                overwrite=True
+                )
+            
+            # quit timeflux
+            terminate_windows()
 
-                # Generate mne raw array from data processed with timeflux
-                calibration_real_time_power = mne.io.RawArray(data=self.data_all.values.T, info=self.info)
-                
-                # save data
-                calibration_real_time_power.save(
-                    self.save_path,
-                    overwrite=True
-                    )
-                
-                # quit timeflux
-                terminate_windows()
-
-                self.saved = True
+            self.saved = True
             

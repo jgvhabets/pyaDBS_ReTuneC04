@@ -27,24 +27,28 @@ class Mean(Node):
 
     def update(self):
         
-        # Make sure we have a non-empty dataframe
-        if self.i.ready():
+        # loop through numbered import ports
+        for iteration, port in enumerate(list(self.ports.values())):
 
-            # self.logger.info(f'mean -- data input at: {local_clock()}')
+            # Make sure we have a non-empty dataframe
+            if port.ready():
 
-            # extract data
-            data, package_id = utils.extract_data(self.i)
+                # self.logger.info(f'mean -- data input at: {local_clock()}')
 
-            # compute mean
-            samples_mean = data.mean().values.reshape(1,-1)
+                # extract data
+                data, package_id = utils.extract_data(port)
 
-            # get current timestamp
-            timestamp_received = local_clock()
-            # print(f'mean -- timestamp_received: {timestamp_received}')
+                # compute mean
+                samples_mean = data.mean().values.reshape(1,-1)
 
-            # Set as output 
-            self.o.data, self.o.meta  = self.out.set(samples=samples_mean,
-                                                     timestamp_received=timestamp_received,
-                                                     package_id=package_id)
+                # get current timestamp
+                timestamp_received = local_clock()
+                # print(f'mean -- timestamp_received: {timestamp_received}')
 
-            # self.logger.info(f'mean -- sent from mean at: {local_clock()}, package number {self.o.data["package_numbers"].iat[0]}, package id {self.o.data["package_ids"].iat[0]}')
+                # Set as output
+                output_port = getattr(self, f"o_{iteration+1}")
+                output_port.data, output_port.meta  = self.out.set(samples=samples_mean,
+                                                        timestamp_received=timestamp_received,
+                                                        package_id=package_id)
+
+                # self.logger.info(f'mean -- sent from mean at: {local_clock()}, package number {self.o.data["package_numbers"].iat[0]}, package id {self.o.data["package_ids"].iat[0]}')

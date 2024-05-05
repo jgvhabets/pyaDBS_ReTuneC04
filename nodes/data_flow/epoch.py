@@ -36,25 +36,29 @@ class Epoch(Node):
 
     def update(self):
         
-        # Make sure we have a non-empty dataframe
-        if self.i.ready():
+        # loop through numbered import ports
+        for _, port in enumerate(list(self.ports.values())):
 
-            # self.logger.info(f'epoch {self.config_field} -- data input at: {local_clock()}')
+            # Make sure we have a non-empty dataframe
+            if port.ready():
 
-            # add data to buffer
-            self.buffer = pd.concat([self.buffer, self.i.data])
+                # self.logger.info(f'epoch {self.config_field} -- data input at: {local_clock()}')
 
-            # track whether buffer is capable to process incoming data in real-time
-            if self.i.data.shape[0] > self._step_size:
-                self.n_overflow += 1
-                if self.n_overflow > 10:
-                    self.logger.info(f'epoch {self.config_field} -- buffer is overflowing')    
-                    self.n_overflow = 0
+                # add data to buffer
+                self.buffer = pd.concat([self.buffer, port.data])
 
-            # self.logger.info(f'epoch {self.config_field} -- buffer size: {self.buffer.shape[0]}')
+                # track whether buffer is capable to process incoming data in real-time
+                if port.data.shape[0] > self._step_size:
+                    self.n_overflow += 1
+                    if self.n_overflow > 10:
+                        self.logger.info(f'epoch {self.config_field} -- buffer is overflowing')    
+                        self.n_overflow = 0
+
+                # self.logger.info(f'epoch {self.config_field} -- buffer size: {self.buffer.shape[0]}')
 
         # Check if buffer has reached window size
-        if self.buffer.shape[0] >= self._win_size:
+        iteration = 1
+        while self.buffer.shape[0] >= self._win_size:
 
             # self.logger.info(f'epoch -- window size reached at: {local_clock()}')
 
@@ -68,8 +72,11 @@ class Epoch(Node):
             timestamp_received = local_clock()
             # print(f'epoch -- timestamp_received: {timestamp_received}')
 
-            # Set as output 
-            self.o.data, self.o.meta  = self.out.set(samples=data_from_buffer[self.recording_channels],
-                                                        timestamp_received=timestamp_received)
+            # Set output
+            output_port = getattr(self, f"o_{iteration}")
+            output_port.data, output_port.meta  = self.out.set(samples=data_from_buffer[self.recording_channels],
+                                                            timestamp_received=timestamp_received)
 
+            # increase iteration
+            iteration += 1
             # self.logger.info(f'epoch {self.config_field} -- sent from epoch at: {local_clock()}, package number {self.o.data["package_numbers"].iat[0]}, package id {self.o.data["package_ids"].iat[0]}')

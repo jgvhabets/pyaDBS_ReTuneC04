@@ -56,15 +56,15 @@ graphs:
     edges: 
       - source: TmsiSampler:selection
         target: EpochRaw
-      - source: EpochRaw
+      - source: EpochRaw:*
         target: Power
-      - source: Power
+      - source: Power:*
         target: EpochPower
-      - source: EpochPower
+      - source: EpochPower:*
         target: Mean
       - source: TmsiSampler:all
         target: LSL_Saga
-      - source: Mean
+      - source: Mean:*
         target: LSL_Power
     rate: 0  # Run this graph x times per second
 
