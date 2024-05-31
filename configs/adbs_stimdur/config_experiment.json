@@ -39,7 +39,7 @@
     "CONNECT_NEUROOMEGA": true,
     "stim": {
         "rate": 20,
-        "detection_blank_period": 0.25,
+        "detection_blank_period": 0.5,
         "onset_period": 0.25,
         "termination_period": [],
         "ramp_period": 0.5,
