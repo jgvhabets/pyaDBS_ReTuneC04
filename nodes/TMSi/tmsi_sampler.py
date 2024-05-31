@@ -170,7 +170,7 @@ class Tmsisampler(Node):
             time_array = self.get_stamps_for_samples(n_new_samples=sampled_arr.shape[0])
 
             # Prepare output dataframe
-            samples = DataFrame(data=sampled_arr[:, :-2],  # only include data channels (i.e., not counter)
+            samples = DataFrame(data=sampled_arr[:, 1:self.n_channels+1],  # only include data channels (i.e., not counter)
                                 columns=[ch.name for ch in self.dev.channels[:-2]],
                                 index=time_array)
             
@@ -211,7 +211,7 @@ class Tmsisampler(Node):
             timestamp_received = local_clock()
 
             # rereference aDBS channels bipolarly
-            samples_bipolar = sampled_arr[:, :-2][:,self.aDBS_channel_bool][:,0] - sampled_arr[:, :-2][:,self.aDBS_channel_bool][:,1]
+            samples_bipolar = sampled_arr[:, 1:self.n_channels+1][:,self.aDBS_channel_bool][:,0] - sampled_arr[:, 1:self.n_channels+1][:,self.aDBS_channel_bool][:,1]
             samples_bipolar= samples_bipolar.reshape(-1,1)
 
             # Set timeflux output only using channels selected for aDBS using topic "selection"
@@ -224,7 +224,7 @@ class Tmsisampler(Node):
             # Set timeflux output only using channels selected for aDBS using topic "all"     
             (self.o_all.data, 
             self.o_all.meta) = self.out_all.set(
-                samples=np.hstack((sampled_arr[:, :-2], samples_bipolar)),
+                samples=np.hstack((sampled_arr[:, 1:self.n_channels+1], samples_bipolar)),
                 timestamp_received=timestamp_received
             )
             
