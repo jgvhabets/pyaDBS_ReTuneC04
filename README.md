@@ -26,7 +26,8 @@ timeflux, py-newronika interface, and py-TMSi interface.
   - create `neuroomega_matlab` folder in `REPO\packages` (including pyproject.toml and src)
   - ensure that correct env is activated! Execute without charite proxies (!)
   - `cd REPO\packages\neuroomega_matlab`, `pip install -e .`  (pip install the package editable)
-  - required default scripts: AO_DefaultStopStimulation, and edited version of AO_DefaultStimulation
+  - required default scripts: `AO_DefaultStopStimulation`, `AO_DefaultStimulation`
+  - edit `AO_DefaultStimulation` by removing the if clauses (StimAmpRight_mA > 0 and StimAmpLeft_mA > 0) around the calls to `AO_StartDigitalStimulation()`
 
 ### Important Notes
 
