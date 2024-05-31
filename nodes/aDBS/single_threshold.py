@@ -117,24 +117,27 @@ class Single_threshold(Node):
             # update detection blank state
             self.update_detection_blank()
 
-        # detection blank is inactive -> proceed checking value against threshold
+        # detection blank is inactive -> check trigger state
         elif self._in_detection_blank == False:
 
-            # value is higher than threshold -> increase above threshold loop counter
-            if value > self._threshold:
-                self.update_threshold_loop_counter(increase="_loops_above_threshold", 
-                                                   reset="_loops_below_threshold",
-                                                   period="_onset_period",
-                                                   trigger_state_goal="onset",
-                                                   stim_state_to_leave="low")            
+            # trigger state is not in onset or termination -> proceed to check value against threshold
+            if self._trigger_state == "none":
 
-            # value is lower than threshold -> increase below threshold loop counter
-            elif value <= self._threshold:
-                self.update_threshold_loop_counter(increase="_loops_below_threshold", 
-                                                   reset="_loops_above_threshold",
-                                                   period="_termination_period",
-                                                   trigger_state_goal="termination",
-                                                   stim_state_to_leave="high")                  
+                # value is higher than threshold -> increase above threshold loop counter
+                if value > self._threshold:
+                    self.update_threshold_loop_counter(increase="_loops_above_threshold", 
+                                                    reset="_loops_below_threshold",
+                                                    period="_onset_period",
+                                                    trigger_state_goal="onset",
+                                                    stim_state_to_leave="low")            
+
+                # value is lower than threshold -> increase below threshold loop counter
+                elif value <= self._threshold:
+                    self.update_threshold_loop_counter(increase="_loops_below_threshold", 
+                                                    reset="_loops_above_threshold",
+                                                    period="_termination_period",
+                                                    trigger_state_goal="termination",
+                                                    stim_state_to_leave="high")
 
     def update_detection_blank(self):
         
@@ -150,8 +153,6 @@ class Single_threshold(Node):
 
     def update_threshold_loop_counter(self, increase, reset, period, trigger_state_goal, stim_state_to_leave):
 
-        # as long as period criterium not fulfilled, keep trigger state to none
-        self._trigger_state == 'none'
         # increase the number of loops below/above threshold
         setattr(self, increase, getattr(self, increase) + 1)
         # reset the number of loops above/below threshold
