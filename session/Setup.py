@@ -129,6 +129,9 @@ class Setup():
         reader = Xdf_Reader(filename=calibration_save_path_tmsi[0])
         calibration_data = reader.data[0]
 
+        # Rescale the data to microvolts as data is scaled to volts upon importing with Xdf_Reader
+        calibration_data._data = calibration_data._data*1e6
+
         # Rereference the signals according to the referencing scheme in the session config
         calibration_data_reref = mne.set_bipolar_reference(
             calibration_data,

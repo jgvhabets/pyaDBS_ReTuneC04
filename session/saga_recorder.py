@@ -67,11 +67,11 @@ def saga_recorder(save_path):
             dev.open()      
             
             # # Check if there is already a plotter application in existence
-            # plotter_app = QtWidgets.QApplication.instance()
+            plotter_app = QtWidgets.QApplication.instance()
             
             # # Initialise the plotter application if there is no other plotter application
-            # if not plotter_app:
-            #     plotter_app = QtWidgets.QApplication(sys.argv)
+            if not plotter_app:
+                plotter_app = QtWidgets.QApplication(sys.argv)
                         
             
             # Initialise the desired file-writer class and state its file path
@@ -82,23 +82,20 @@ def saga_recorder(save_path):
         
             # # Define the GUI object and show it 
             # # The channel selection argument states which channels need to be displayed initially by the GUI
-            # plot_window = PlottingGUI(plotter_format = PlotterFormat.signal_viewer,
-            #                         figurename = 'A RealTimePlot', 
-            #                         device = dev)
-            # plot_window.show()
+            plot_window = PlottingGUI(plotter_format = PlotterFormat.signal_viewer,
+                                    figurename = 'A RealTimePlot', 
+                                    device = dev)
+            plot_window.show()
             
             # # Enter the event loop
-            # plotter_app.exec_()
+            plotter_app.exec_()
             
             # # Quit and delete the Plotter application
-            # QtWidgets.QApplication.quit()
-            # del plotter_app
+            QtWidgets.QApplication.quit()
+            del plotter_app
             
             # start recording
             dev.start_measurement()
-
-            print('starting recording for 180s')
-            sleep(180)
 
             # stop recording
             dev.stop_measurement()
