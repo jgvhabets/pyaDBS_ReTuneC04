@@ -198,5 +198,5 @@ class Single_threshold(Node):
             self._stim_state = 'low'
             self._trigger_state = 'none'
             self._in_detection_blank = True
-            self._stim_amp = 0
+            self._stim_amp = 0.0000001
             self.logger.info(f'\t...aDBS deactivated at {datetime.now(tz=timezone.utc)}...')
