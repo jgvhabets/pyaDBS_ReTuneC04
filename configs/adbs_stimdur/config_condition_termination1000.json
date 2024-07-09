@@ -3,6 +3,7 @@
         "condition_name": "termination1000"
     },
     "stim": {
+        "mode": "StimOn",
         "termination_period": 1
     }
 }

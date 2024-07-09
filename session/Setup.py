@@ -96,7 +96,7 @@ class Setup():
     def record_calibration_data(self):
 
         # get filename for calibration data
-        calibration_save_path = self._get_save_path("calibration")
+        calibration_save_path = self._get_save_path("calibration", "StimOff")
 
         # check if file was already created before. If yes, query whether user wants to proceed and write file with same run index or to change run index
         if os.path.exists(calibration_save_path):
@@ -249,7 +249,7 @@ class Setup():
                 config_session["gen"]["patient_id"] = self.patient_id
                 config_session["gen"]["medication_state"] = self.medication_state
                 config_session["gen"]["session_id"] = self.session_id
-                config_session["cal"] = {"path": str(self._get_save_path("calibration"))}
+                config_session["cal"] = {"path": str(self._get_save_path("calibration", "StimOff"))}
                 config_session["rec"]["tmsi"]["aDBS_channels"] = [adbs_channel_anode, adbs_channel_cathode]
                 config_session["rec"]["tmsi"]["aDBS_channel_bipolar"] = [f"{adbs_channel_anode}-{adbs_channel_cathode}"]
                 config_session["analysis"]["power"]["f_band_min"] = f_band_min
@@ -257,7 +257,7 @@ class Setup():
                 config_session["stim"]["stim_amp_high"] = max_stim_amp
 
                 # create path to session config
-                config_session_path = self._get_save_path(config_session["gen"]["condition_name"])
+                config_session_path = self._get_save_path(config_session["gen"]["condition_name"], config_session["stim"]["mode"])
 
                 # save config in session folder
                 with open(config_session_path, 'w') as file:
@@ -324,7 +324,7 @@ class Setup():
         for idx, ch in enumerate(self.dev.channels):
             print('[{0}] : [{1}] in [{2}]'.format(idx, ch.name, ch.unit_name))
 
-    def _get_save_path(self, task):
+    def _get_save_path(self, task, stim):
        
         # set extension based on type of data to be saved
         if task == "calibration":
@@ -336,6 +336,7 @@ class Setup():
         bidspath = self.save_path.copy().update(
             task=task,
             run=self.calibration_id,
+            acq=stim,
             suffix="ieeg",
             extension=extension,
             check=False
