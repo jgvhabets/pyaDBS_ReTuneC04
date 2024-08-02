@@ -336,7 +336,7 @@ class Setup():
         bidspath = self.save_path.copy().update(
             task=task,
             run=self.calibration_id,
-            acq=stim,
+            acquisition=stim,
             suffix="ieeg",
             extension=extension,
             check=False
