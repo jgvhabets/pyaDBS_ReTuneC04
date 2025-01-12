@@ -355,7 +355,7 @@ class Setup():
     def _load_calibration_data(self):
 
         # get filename for calibration data
-        calibration_save_path = self._get_save_path("calibration")
+        calibration_save_path = self._get_save_path("calibration", "StimOff")
 
         # check if file exists with given calibration_id. If it exists, load it.
         if not os.path.exists(calibration_save_path):

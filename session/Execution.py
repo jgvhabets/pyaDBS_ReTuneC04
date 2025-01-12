@@ -26,10 +26,10 @@ class Execution():
         # check whether directory exists
         self._check_save_path()
 
-    def start_stimulation(self, condition_name):
+    def start_stimulation(self, condition_name, stim):
 
             # get path to session configuration for this condition 
-            config_session_path = self._get_session_path(condition_name)
+            config_session_path = self._get_session_path(condition_name, stim)
             assert os.path.exists(config_session_path), f"\n{config_session_path} does not exist. Provide a session configuration.\n"
 
             # run timeflux
@@ -62,12 +62,13 @@ class Execution():
         # check whether this directory exists
         assert os.path.exists(self.save_path.directory), f"\n{self.save_path.directory} does not exist. Set up session before executing the experiment.\n"
 
-    def _get_session_path(self, condition_name):
+    def _get_session_path(self, condition_name, stim):
        
         # update BIDSpath object of save path to account fo data specific fields
         bidspath = self.save_path.copy().update(
             task=condition_name,
             run=self.calibration_id,
+            acquisition=stim,
             suffix="ieeg",
             extension=".json",
             check=False
